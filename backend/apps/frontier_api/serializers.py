@@ -153,20 +153,6 @@ class MobileBookingSerializer(serializers.ModelSerializer):
         if obj.host_user:
             return f"{obj.host_user.first_name} {obj.host_user.last_name}".strip() or obj.host_user.username
         return None
-    facility = serializers.CharField(source='spot.floor.facility.name', read_only=True)
-    qr_payload = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Booking
-        fields = [
-            'id', 'spot_code', 'floor', 'facility',
-            'start_time', 'end_time', 'access_code',
-            'qr_payload', 'status'
-        ]
-    
-    def get_qr_payload(self, obj):
-        from apps.lockbox import services as lockbox_services
-        return lockbox_services.get_access_payload(obj)
 
 
 class AccessValidationSerializer(serializers.Serializer):

@@ -80,7 +80,29 @@ def create_mobile_booking(request):
     }
     """
     facility_id = request.data.get('facility_id')
-    duration_hours = request.data.get('duration_hours', 1.0)
+
+    # Accept both duration_hours (preferred) and duration (legacy) for backward compatibility
+    duration_hours = request.data.get('duration_hours')
+    if duration_hours is None:
+        duration_hours = request.data.get('duration')
+    if duration_hours is None:
+        duration_hours = 1.0
+    
+    # Validate types early to return helpful errors
+    try:
+        facility_id = int(facility_id)
+    except (TypeError, ValueError):
+        return Response(
+            {'error': 'facility_id must be an integer'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    try:
+        duration_hours = float(duration_hours)
+    except (TypeError, ValueError):
+        return Response(
+            {'error': 'duration_hours must be numeric'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
     if not facility_id:
         return Response(
@@ -92,7 +114,7 @@ def create_mobile_booking(request):
         booking = orbit_services.create_booking(
             user=request.user,
             facility_id=facility_id,
-            duration_hours=float(duration_hours)
+            duration_hours=duration_hours
         )
         
         serializer = MobileBookingSerializer(booking)
@@ -104,8 +126,9 @@ def create_mobile_booking(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
+        # Provide the underlying error to aid debugging during development
         return Response(
-            {'error': 'Failed to create booking'},
+            {'error': f'Failed to create booking: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
