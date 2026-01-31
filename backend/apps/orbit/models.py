@@ -9,10 +9,12 @@ class Booking(TimeStampedModel):
     Parking spot booking with time window and access control.
     """
     STATUS_CHOICES = [
+        ('pending_approval', 'Pending Approval'),
         ('reserved', 'Reserved'),
         ('active', 'Active'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
+        ('rejected', 'Rejected'),
     ]
     
     user = models.ForeignKey(
@@ -36,6 +38,21 @@ class Booking(TimeStampedModel):
         max_length=8,
         unique=True,
         help_text="Unique access code for entry verification"
+    )
+    
+    # P2P Approval fields
+    host_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='hosted_bookings',
+        null=True,
+        blank=True,
+        help_text="Facility owner who needs to approve (for P2P)"
+    )
+    rejection_reason = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Reason for rejection (if rejected)"
     )
     
     class Meta:

@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from common.permissions import IsAdminOrReadOnly
 from .models import Facility, Floor, ParkingSpot, Device
 from .serializers import (
@@ -26,6 +27,37 @@ class FacilityViewSet(viewsets.ModelViewSet):
         facility = self.get_object()
         stats = services.get_facility_stats(facility.id)
         return Response(stats)
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_listings(self, request):
+        """Get facilities owned by the current user (for hosts)."""
+        facilities = Facility.objects.filter(owner=request.user)
+        serializer = FacilityListSerializer(facilities, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def incoming_bookings(self, request):
+        """Get pending booking requests for facilities owned by current user."""
+        from apps.orbit.models import Booking
+        from apps.orbit.serializers import BookingSerializer
+        
+        # Get all pending bookings for facilities owned by this user
+        pending_bookings = Booking.objects.filter(
+            host_user=request.user,
+            status='pending_approval'
+        ).select_related(
+            'user', 'spot', 'spot__floor', 'spot__floor__facility'
+        ).order_by('-created_at')
+        
+        # Support filtering by facility
+        facility_id = request.query_params.get('facility_id')
+        if facility_id:
+            pending_bookings = pending_bookings.filter(
+                spot__floor__facility_id=facility_id
+            )
+        
+        serializer = BookingSerializer(pending_bookings, many=True)
+        return Response(serializer.data)
 
 
 class FloorViewSet(viewsets.ModelViewSet):

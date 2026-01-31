@@ -2,6 +2,35 @@
 
 Django REST Framework backend for the ParkHero parking reservation platform.
 
+## 🎯 Key Features (MVP)
+
+### ✅ Core Parking System
+- **Facility Management**: 46+ parking facilities across 3 types
+- **Inventory**: 3,581 parking spots with real-time availability
+- **IoT Simulation**: 985 devices (sensors + barriers) for access control
+- **Booking Engine**: Complete reservation workflow with status tracking
+- **QR Access**: Base64-encoded QR codes for touchless entry/exit
+
+### ✅ P2P Marketplace
+- **Homeowner Onboarding**: Register private driveways/garages
+- **Approval Workflow**: Homeowners approve/reject booking requests
+- **Host Dashboard**: View listings and incoming reservation requests
+- **Pricing**: Flexible hourly/daily rates set by owners
+- **Smart Status**: Bookings start as `pending_approval` for P2P facilities
+
+### ✅ Empty Parking Lots (Small Business)
+- **Instant Booking**: No approval required - immediate reservation
+- **Barrier Access**: Entry/exit controlled via QR code validation
+- **Flexible Parking**: Book a spot, park anywhere in the lot
+- **Payment Simulation**: Designed for pay-at-exit (simulated for MVP)
+- **5 Test Lots**: Pre-configured empty lots ready for testing
+
+### 📱 Mobile-First APIs
+- Filtering by type (P2P, Small Business, Enterprise)
+- Rich facility details with pricing and requirements
+- Real-time availability checking
+- Distance-based sorting (latitude/longitude ready)
+
 ## Architecture
 
 The backend consists of 5 Django apps with clear separation of concerns:

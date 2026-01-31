@@ -20,6 +20,10 @@ class MobileFacilityViewSet(viewsets.ReadOnlyModelViewSet):
     
     GET /api/mobile/facilities/ - List all facilities
     GET /api/mobile/facilities/{id}/ - Get facility details
+    
+    Query params:
+    - type: Filter by onboarding type (p2p, small, enterprise)
+    - facility_type: Filter by facility type (mall, lot, office)
     """
     queryset = Facility.objects.all()
     permission_classes = [AllowAny]
@@ -28,6 +32,21 @@ class MobileFacilityViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'list':
             return MobileFacilityListSerializer
         return MobileFacilityDetailSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by onboarding type (p2p, small, enterprise)
+        onboarding_type = self.request.query_params.get('type')
+        if onboarding_type:
+            queryset = queryset.filter(onboarding_type=onboarding_type)
+        
+        # Filter by facility type (mall, lot, office)
+        facility_type = self.request.query_params.get('facility_type')
+        if facility_type:
+            queryset = queryset.filter(type=facility_type)
+        
+        return queryset
 
 
 class MobileFloorViewSet(viewsets.ReadOnlyModelViewSet):
@@ -57,11 +76,11 @@ def create_mobile_booking(request):
     POST /api/mobile/bookings/
     Body: {
         "facility_id": 1,
-        "duration": 2.0
+        "duration_hours": 2.0
     }
     """
     facility_id = request.data.get('facility_id')
-    duration = request.data.get('duration', 1.0)
+    duration_hours = request.data.get('duration_hours', 1.0)
     
     if not facility_id:
         return Response(
@@ -73,7 +92,7 @@ def create_mobile_booking(request):
         booking = orbit_services.create_booking(
             user=request.user,
             facility_id=facility_id,
-            duration_hours=float(duration)
+            duration_hours=float(duration_hours)
         )
         
         serializer = MobileBookingSerializer(booking)

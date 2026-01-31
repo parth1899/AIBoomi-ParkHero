@@ -13,6 +13,7 @@ urlpatterns = [
     
     # Authentication
     path('api/auth/token/', obtain_auth_token, name='api-token-auth'),
+    path('api/auth/login/', obtain_auth_token, name='api-token-login'),  # Alias for consistency
     
     # Internal APIs (for admin/management)
     path('api/atlas/', include('apps.atlas.urls')),

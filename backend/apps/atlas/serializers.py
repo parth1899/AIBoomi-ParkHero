@@ -5,12 +5,16 @@ from .models import Facility, Floor, ParkingSpot, Device
 class FacilitySerializer(serializers.ModelSerializer):
     """Full facility details serializer."""
     available_spots_count = serializers.SerializerMethodField()
+    owner_username = serializers.CharField(source='owner.username', read_only=True, allow_null=True)
+    owner_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Facility
         fields = [
             'id', 'name', 'type', 'address', 'onboarding_type',
-            'confidence_score', 'available_spots_count', 
+            'confidence_score', 'available_spots_count',
+            'owner', 'owner_username', 'owner_name',
+            'hourly_rate', 'daily_rate',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -21,16 +25,24 @@ class FacilitySerializer(serializers.ModelSerializer):
             floor__facility=obj,
             status='available'
         ).count()
+    
+    def get_owner_name(self, obj):
+        """Get owner's full name if available."""
+        if obj.owner:
+            return f"{obj.owner.first_name} {obj.owner.last_name}".strip() or obj.owner.username
+        return None
 
 
 class FacilityListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for facility list view."""
     available_spots = serializers.SerializerMethodField()
+    owner_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Facility
         fields = [
-            'id', 'name', 'type', 'confidence_score', 'available_spots'
+            'id', 'name', 'type', 'onboarding_type', 'confidence_score', 
+            'available_spots', 'hourly_rate', 'daily_rate', 'owner_name'
         ]
     
     def get_available_spots(self, obj):
@@ -38,6 +50,12 @@ class FacilityListSerializer(serializers.ModelSerializer):
             floor__facility=obj,
             status='available'
         ).count()
+    
+    def get_owner_name(self, obj):
+        """Get owner's full name if available."""
+        if obj.owner:
+            return f"{obj.owner.first_name} {obj.owner.last_name}".strip() or obj.owner.username
+        return None
 
 
 class ParkingSpotSerializer(serializers.ModelSerializer):

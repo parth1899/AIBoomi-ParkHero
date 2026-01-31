@@ -8,20 +8,26 @@ class BookingSerializer(serializers.ModelSerializer):
     """Full booking details serializer."""
     spot_details = ParkingSpotSerializer(source='spot', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
+    user_first_name = serializers.CharField(source='user.first_name', read_only=True)
+    user_last_name = serializers.CharField(source='user.last_name', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
     facility_name = serializers.CharField(source='spot.floor.facility.name', read_only=True)
     floor_label = serializers.CharField(source='spot.floor.label', read_only=True)
     spot_code = serializers.CharField(source='spot.code', read_only=True)
     is_active = serializers.BooleanField(read_only=True)
+    host_username = serializers.CharField(source='host_user.username', read_only=True, allow_null=True)
     
     class Meta:
         model = Booking
         fields = [
-            'id', 'user', 'user_name', 'spot', 'spot_details',
+            'id', 'user', 'user_name', 'user_first_name', 'user_last_name', 'user_email',
+            'spot', 'spot_details',
             'spot_code', 'floor_label', 'facility_name',
             'start_time', 'end_time', 'status', 'access_code',
+            'host_user', 'host_username', 'rejection_reason',
             'is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['access_code', 'created_at', 'updated_at']
+        read_only_fields = ['access_code', 'host_user', 'rejection_reason', 'created_at', 'updated_at']
 
 
 class BookingCreateSerializer(serializers.Serializer):

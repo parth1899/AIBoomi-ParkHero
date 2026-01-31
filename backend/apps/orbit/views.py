@@ -114,3 +114,34 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         serializer = BookingListSerializer(bookings, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a P2P booking request (host only)."""
+        booking = self.get_object()
+        
+        try:
+            updated_booking = services.approve_booking(booking.id, request.user)
+            serializer = self.get_serializer(updated_booking)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject a P2P booking request (host only)."""
+        booking = self.get_object()
+        reason = request.data.get('reason', None)
+        
+        try:
+            updated_booking = services.reject_booking(booking.id, request.user, reason)
+            serializer = self.get_serializer(updated_booking)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )

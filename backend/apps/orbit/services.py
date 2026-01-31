@@ -99,10 +99,15 @@ def create_booking(user, facility_id, duration_hours, start_time=None):
     Raises:
         ValueError: If no spots available
     """
+    from apps.atlas.models import Facility
+    
     if start_time is None:
         start_time = timezone.now()
     
     end_time = start_time + timedelta(hours=duration_hours)
+    
+    # Get facility to check onboarding type
+    facility = Facility.objects.get(id=facility_id)
     
     # Find best available spot
     spot = find_best_available_spot(facility_id, start_time, end_time)
@@ -113,6 +118,15 @@ def create_booking(user, facility_id, duration_hours, start_time=None):
     # Generate access code
     access_code = generate_access_code()
     
+    # Determine initial status based on facility type
+    # P2P facilities require host approval
+    if facility.onboarding_type == 'p2p':
+        initial_status = 'pending_approval'
+        host_user = facility.owner
+    else:
+        initial_status = 'reserved'
+        host_user = None
+    
     # Create booking
     booking = Booking.objects.create(
         user=user,
@@ -120,10 +134,11 @@ def create_booking(user, facility_id, duration_hours, start_time=None):
         start_time=start_time,
         end_time=end_time,
         access_code=access_code,
-        status='reserved'
+        status=initial_status,
+        host_user=host_user
     )
     
-    # Update spot status
+    # Update spot status (reserve spot even if pending approval)
     spot.status = 'reserved'
     spot.save(update_fields=['status', 'updated_at'])
     
@@ -175,6 +190,74 @@ def cancel_booking(booking_id):
     booking.save(update_fields=['status', 'updated_at'])
     
     # Update spot status to available
+    booking.spot.status = 'available'
+    booking.spot.save(update_fields=['status', 'updated_at'])
+    
+    return booking
+
+
+@transaction.atomic
+def approve_booking(booking_id, approver_user):
+    """
+    Approve a P2P booking request.
+    
+    Args:
+        booking_id: ID of the booking
+        approver_user: User approving the booking (must be facility owner)
+        
+    Returns:
+        Updated Booking instance
+        
+    Raises:
+        ValueError: If booking cannot be approved
+    """
+    booking = Booking.objects.select_related('spot', 'spot__floor__facility').get(id=booking_id)
+    
+    # Verify the approver is the facility owner
+    if booking.host_user != approver_user:
+        raise ValueError("Only the facility owner can approve this booking")
+    
+    if booking.status != 'pending_approval':
+        raise ValueError(f"Cannot approve booking with status: {booking.status}")
+    
+    # Update booking status to reserved
+    booking.status = 'reserved'
+    booking.save(update_fields=['status', 'updated_at'])
+    
+    return booking
+
+
+@transaction.atomic
+def reject_booking(booking_id, approver_user, reason=None):
+    """
+    Reject a P2P booking request.
+    
+    Args:
+        booking_id: ID of the booking
+        approver_user: User rejecting the booking (must be facility owner)
+        reason: Optional rejection reason
+        
+    Returns:
+        Updated Booking instance
+        
+    Raises:
+        ValueError: If booking cannot be rejected
+    """
+    booking = Booking.objects.select_related('spot', 'spot__floor__facility').get(id=booking_id)
+    
+    # Verify the approver is the facility owner
+    if booking.host_user != approver_user:
+        raise ValueError("Only the facility owner can reject this booking")
+    
+    if booking.status != 'pending_approval':
+        raise ValueError(f"Cannot reject booking with status: {booking.status}")
+    
+    # Update booking status to rejected
+    booking.status = 'rejected'
+    booking.rejection_reason = reason or "No reason provided"
+    booking.save(update_fields=['status', 'rejection_reason', 'updated_at'])
+    
+    # Release the spot
     booking.spot.status = 'available'
     booking.spot.save(update_fields=['status', 'updated_at'])
     

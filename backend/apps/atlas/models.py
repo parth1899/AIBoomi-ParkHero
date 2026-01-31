@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from common.models import TimeStampedModel
 
 
@@ -15,6 +16,7 @@ class Facility(TimeStampedModel):
     ONBOARDING_TYPE_CHOICES = [
         ('enterprise', 'Enterprise'),
         ('small', 'Small Business'),
+        ('p2p', 'Peer-to-Peer'),
     ]
     
     name = models.CharField(max_length=255)
@@ -26,6 +28,30 @@ class Facility(TimeStampedModel):
         default='small'
     )
     confidence_score = models.IntegerField(default=80)
+    
+    # P2P Marketplace fields
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='owned_facilities',
+        null=True,
+        blank=True,
+        help_text="Facility owner for P2P marketplace"
+    )
+    hourly_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hourly parking rate in INR"
+    )
+    daily_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Daily parking rate in INR"
+    )
     
     class Meta:
         verbose_name_plural = "Facilities"
