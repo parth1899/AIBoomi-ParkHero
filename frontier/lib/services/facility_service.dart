@@ -65,17 +65,22 @@ class FacilityService {
         ? _mapFloors((facility['floors'] as List<dynamic>?) ?? [])
         : const <ParkingFloor>[];
 
+    final lat = _parseNum(facility['latitude']) ??
+      _parseNum(facility['latitute']) ??
+      0.0;
+    final lng = _parseNum(facility['longitude']) ?? 0.0;
+
     return ParkingLot(
       id: id,
       name: facility['name'] as String? ?? 'Parking Facility',
       address: facility['address'] as String? ??
-          (facility['owner_name'] as String? ?? 'Address unavailable'),
+        (facility['owner_name'] as String? ?? 'Address unavailable'),
       areaTags: (facility['badges'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          <String>[],
-      latitude: _parseNum(facility['latitude']) ?? 0.0,
-      longitude: _parseNum(facility['longitude']) ?? 0.0,
+          ?.map((e) => e.toString())
+          .toList() ??
+        <String>[],
+      latitude: lat,
+      longitude: lng,
       pricePerHour: price,
       rating: rating,
       reviewCount: _parseNum(facility['review_count'])?.toInt() ?? 120,

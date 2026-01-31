@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../types/models.dart';
 import '../services/floor_service.dart';
 import '../services/booking_service.dart';
+import '../services/atlas_service.dart';
 
 class FloorMapScreen extends StatefulWidget {
   final FloorMapArgs args;
@@ -25,34 +26,60 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
   ParkingSpot? _selectedSpot;
   int _hours = 2;
   late ParkingFloor _floor;
+  List<ParkingFloor> _floors = const [];
+  int _selectedFloorIndex = 0;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _floor = widget.args.floor;
-    _selectedSpot = _floor.spots.isEmpty
-        ? null
-        : _floor.spots.firstWhere(
-            (spot) => spot.status == SpotStatus.reserved,
-            orElse: () => _floor.spots.first,
-          );
+    _floors = widget.args.lot.floors.isNotEmpty
+        ? widget.args.lot.floors
+        : <ParkingFloor>[_floor];
+    _selectedFloorIndex = _floors.indexWhere((f) => f.id == _floor.id);
+    if (_selectedFloorIndex < 0) _selectedFloorIndex = 0;
+    _floor = _floors[_selectedFloorIndex];
+    _selectedSpot = _pickInitialSpot(_floor);
     _loadFloorMap();
   }
 
   Future<void> _loadFloorMap() async {
-    if (_floor.apiId == null) {
-      setState(() => _loading = false);
-      return;
+    final lot = widget.args.lot;
+    List<ParkingFloor> floors = const [];
+    if (lot.id.isNotEmpty) {
+      floors = await AtlasService.fetchFacilityFloorsWithSpots(
+        facilityId: lot.id,
+      );
     }
 
-    final remoteFloor = await FloorService.fetchFloorMap(_floor.apiId!);
+    ParkingFloor? remoteFloor;
+    if (floors.isEmpty && _floor.apiId != null) {
+      remoteFloor = await FloorService.fetchFloorMap(_floor.apiId!);
+    }
     if (!mounted) return;
     setState(() {
-      _floor = remoteFloor ?? _floor;
-      _selectedSpot = _floor.spots.isEmpty ? null : _floor.spots.first;
+      if (floors.isNotEmpty) {
+        _floors = floors;
+        _selectedFloorIndex = _floors.indexWhere(
+          (f) => f.id == _floor.id || f.apiId == _floor.apiId,
+        );
+        if (_selectedFloorIndex < 0) _selectedFloorIndex = 0;
+        _floor = _floors[_selectedFloorIndex];
+      } else {
+        _floor = remoteFloor ?? _floor;
+      }
+      _selectedSpot = _pickInitialSpot(_floor);
       _loading = false;
     });
+  }
+
+  ParkingSpot? _pickInitialSpot(ParkingFloor floor) {
+    if (floor.spots.isEmpty) return null;
+    return floor.spots.firstWhere(
+      (spot) => spot.status == SpotStatus.available,
+      orElse: () => floor.spots.first,
+    );
   }
 
   @override
@@ -61,7 +88,7 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Parking - P1'),
+        title: Text('Parking - ${_floor.name}'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -81,10 +108,21 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   children: [
-                    _LevelChip(label: 'Level P1', selected: true),
-                    _LevelChip(label: 'Level P2'),
-                    _LevelChip(label: 'Level P3'),
-                    _LevelChip(label: 'Level P4'),
+                    ..._floors.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final floor = entry.value;
+                      return _LevelChip(
+                        label: floor.name,
+                        selected: index == _selectedFloorIndex,
+                        onTap: () {
+                          setState(() {
+                            _selectedFloorIndex = index;
+                            _floor = _floors[index];
+                            _selectedSpot = _pickInitialSpot(_floor);
+                          });
+                        },
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -337,34 +375,42 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
 class _LevelChip extends StatelessWidget {
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   const _LevelChip({
     required this.label,
     this.selected = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.textPrimary : AppColors.card,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.textPrimary : AppColors.card,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-          color: selected ? Colors.white : AppColors.textPrimary,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              color: selected ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
         ),
       ),
     );
