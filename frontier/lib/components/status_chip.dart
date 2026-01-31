@@ -35,23 +35,35 @@ class StatusChip extends StatelessWidget {
 
   Color _colorForStatus(BookingStatus status) {
     switch (status) {
+      case BookingStatus.pending:
+        return AppColors.warning;
+      case BookingStatus.reserved:
+        return AppColors.primary;
       case BookingStatus.active:
         return AppColors.primary;
       case BookingStatus.completed:
         return AppColors.success;
       case BookingStatus.cancelled:
         return AppColors.textSecondary;
+      case BookingStatus.rejected:
+        return AppColors.danger;
     }
   }
 
   String _labelForStatus(BookingStatus status) {
     switch (status) {
+      case BookingStatus.pending:
+        return 'PENDING';
+      case BookingStatus.reserved:
+        return 'RESERVED';
       case BookingStatus.active:
         return 'ACTIVE';
       case BookingStatus.completed:
         return 'COMPLETED';
       case BookingStatus.cancelled:
         return 'CANCELLED';
+      case BookingStatus.rejected:
+        return 'REJECTED';
     }
   }
 }

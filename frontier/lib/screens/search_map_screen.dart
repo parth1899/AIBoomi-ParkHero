@@ -8,6 +8,7 @@ import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
 import '../utils/location_utils.dart';
 import '../types/models.dart';
+import '../services/facility_service.dart';
 
 class SearchMapScreen extends StatefulWidget {
   final String label;
@@ -28,6 +29,7 @@ class SearchMapScreen extends StatefulWidget {
 class _SearchMapScreenState extends State<SearchMapScreen> {
   MapboxMap? _mapboxMap;
   CircleAnnotationManager? _circleManager;
+  bool _loading = true;
 
   @override
   void dispose() {
@@ -65,22 +67,36 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
   @override
   void initState() {
     super.initState();
-    _nearbyLots = parkingLots
-        .where(
-          (lot) =>
-              LocationUtils.distanceInKm(
-                lat1: widget.latitude,
-                lon1: widget.longitude,
-                lat2: lot.latitude,
-                lon2: lot.longitude,
-              ) <=
-              5.0,
-        )
-        .toList();
+    _loadFacilities();
+  }
 
-    if (_nearbyLots.isEmpty) {
-      _nearbyLots = List.of(parkingLots);
-    }
+  Future<void> _loadFacilities() async {
+    final lots = await FacilityService.fetchFacilities();
+    if (!mounted) return;
+    setState(() {
+      _nearbyLots = lots
+          .where(
+            (lot) {
+              if (lot.latitude == 0.0 && lot.longitude == 0.0) {
+                return true;
+              }
+              return LocationUtils.distanceInKm(
+                    lat1: widget.latitude,
+                    lon1: widget.longitude,
+                    lat2: lot.latitude,
+                    lon2: lot.longitude,
+                  ) <=
+                  5.0;
+            },
+          )
+          .toList();
+
+      if (_nearbyLots.isEmpty) {
+        _nearbyLots = lots.isNotEmpty ? lots : List.of(parkingLots);
+      }
+      _loading = false;
+    });
+    await _renderLots();
   }
 
   void _showLotDetails(ParkingLot lot) {
@@ -168,12 +184,26 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                         children: [
                           const Text('Nearby Parking', style: AppTextStyles.subtitle),
                           const SizedBox(height: AppSpacing.md),
-                          ..._nearbyLots.map(
-                            (lot) => ParkingCard(
-                              lot: lot,
-                              onTap: () => _showLotDetails(lot),
+                          if (_loading)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 18),
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else ...[
+                            if (_nearbyLots.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Text('No nearby parking found.'),
+                              ),
+                            ..._nearbyLots.map(
+                              (lot) => ParkingCard(
+                                lot: lot,
+                                onTap: () => _showLotDetails(lot),
+                              ),
                             ),
-                          ),
+                          ],
                           const SizedBox(height: AppSpacing.xl),
                         ],
                       ),

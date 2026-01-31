@@ -2,11 +2,35 @@ import 'package:flutter/material.dart';
 
 import '../components/app_glass_card.dart';
 import '../components/booking_card.dart';
-import '../data/dummy_data.dart';
 import '../theme/app_theme.dart';
+import '../types/models.dart';
+import '../services/booking_service.dart';
 
-class MyBookingsScreen extends StatelessWidget {
+class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
+
+  @override
+  State<MyBookingsScreen> createState() => _MyBookingsScreenState();
+}
+
+class _MyBookingsScreenState extends State<MyBookingsScreen> {
+  List<Booking> _bookings = const [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBookings();
+  }
+
+  Future<void> _loadBookings() async {
+    final bookings = await BookingService.fetchMyBookings();
+    if (!mounted) return;
+    setState(() {
+      _bookings = bookings;
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +51,16 @@ class MyBookingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Expanded(
-              child: ListView.builder(
-                itemCount: bookings.length,
-                itemBuilder: (context, index) {
-                  return BookingCard(booking: bookings[index]);
-                },
-              ),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _bookings.isEmpty
+                      ? const Center(child: Text('No bookings yet.'))
+                      : ListView.builder(
+                          itemCount: _bookings.length,
+                          itemBuilder: (context, index) {
+                            return BookingCard(booking: _bookings[index]);
+                          },
+                        ),
             ),
           ],
         ),

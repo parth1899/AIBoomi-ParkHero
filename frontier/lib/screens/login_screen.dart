@@ -4,9 +4,27 @@ import '../components/app_glass_card.dart';
 import '../components/primary_button.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController(text: 'demo');
+  final _passwordController = TextEditingController(text: 'demo123');
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,18 +63,27 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _TextField(label: 'Email'),
+                      _TextField(label: 'Email', controller: _emailController),
                       const SizedBox(height: AppSpacing.md),
-                      const _TextField(label: 'Password', obscure: true),
+                      _TextField(
+                        label: 'Password',
+                        obscure: true,
+                        controller: _passwordController,
+                      ),
                       const SizedBox(height: AppSpacing.lg),
                       PrimaryButton(
-                        label: 'Continue',
-                        onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.home,
-                          (route) => false,
-                        ),
+                        label: _loading ? 'Signing in...' : 'Continue',
+                        onPressed: _loading ? null : () => _handleLogin(context),
                       ),
+                      if (_error != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          _error!,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       Center(
                         child: TextButton(
@@ -84,21 +111,51 @@ class LoginScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _handleLogin(BuildContext context) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final success = await AuthService.login(
+      username: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (route) => false,
+      );
+    } else {
+      setState(() {
+        _loading = false;
+        _error = 'Login failed. Check your credentials.';
+      });
+    }
+  }
 }
 
 class _TextField extends StatelessWidget {
   final String label;
   final bool obscure;
+  final TextEditingController? controller;
 
   const _TextField({
     required this.label,
     this.obscure = false,
+    this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       obscureText: obscure,
+      controller: controller,
       decoration: InputDecoration(
         labelText: label,
         filled: true,

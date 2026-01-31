@@ -89,7 +89,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       QrImageView(
-                        data: booking.id,
+                        data: booking.qrPayload ?? booking.accessCode ?? booking.id,
                         size: 140,
                         backgroundColor: Colors.white,
                       ),

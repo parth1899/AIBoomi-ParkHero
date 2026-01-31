@@ -97,7 +97,7 @@ class ParkingCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        '\$${lot.pricePerHour.toStringAsFixed(2)}/hr',
+                        '₹${lot.pricePerHour.toStringAsFixed(2)}/hr',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 12,

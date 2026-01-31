@@ -6,14 +6,15 @@ import '../components/spot_marker.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
 import '../types/models.dart';
-import '../data/dummy_data.dart';
+import '../services/floor_service.dart';
+import '../services/booking_service.dart';
 
 class FloorMapScreen extends StatefulWidget {
-  final ParkingFloor floor;
+  final FloorMapArgs args;
 
   const FloorMapScreen({
     super.key,
-    required this.floor,
+    required this.args,
   });
 
   @override
@@ -23,19 +24,40 @@ class FloorMapScreen extends StatefulWidget {
 class _FloorMapScreenState extends State<FloorMapScreen> {
   ParkingSpot? _selectedSpot;
   int _hours = 2;
+  late ParkingFloor _floor;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _selectedSpot = widget.floor.spots.firstWhere(
-      (spot) => spot.status == SpotStatus.reserved,
-      orElse: () => widget.floor.spots.first,
-    );
+    _floor = widget.args.floor;
+    _selectedSpot = _floor.spots.isEmpty
+        ? null
+        : _floor.spots.firstWhere(
+            (spot) => spot.status == SpotStatus.reserved,
+            orElse: () => _floor.spots.first,
+          );
+    _loadFloorMap();
+  }
+
+  Future<void> _loadFloorMap() async {
+    if (_floor.apiId == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final remoteFloor = await FloorService.fetchFloorMap(_floor.apiId!);
+    if (!mounted) return;
+    setState(() {
+      _floor = remoteFloor ?? _floor;
+      _selectedSpot = _floor.spots.isEmpty ? null : _floor.spots.first;
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final lot = parkingLots.first;
+    final lot = widget.args.lot;
 
     return Scaffold(
       appBar: AppBar(
@@ -87,28 +109,37 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(AppRadii.lg),
-                              child: SvgPicture.asset(
-                                widget.floor.imageAsset,
-                                fit: BoxFit.cover,
-                              ),
+                              child: _floor.imageUrl != null
+                                  ? Image.network(
+                                      _floor.imageUrl!,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : SvgPicture.asset(
+                                      _floor.imageAsset,
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                           ),
-                          ...widget.floor.spots.map((spot) {
-                            final left = spot.x * constraints.maxWidth;
-                            final top = spot.y * constraints.maxHeight;
+                          if (_loading)
+                            const Center(child: CircularProgressIndicator())
+                          else ...[
+                            ..._floor.spots.map((spot) {
+                              final left = spot.x * constraints.maxWidth;
+                              final top = spot.y * constraints.maxHeight;
 
-                            return Positioned(
-                              left: left,
-                              top: top,
-                              child: SpotMarker(
-                                spot: spot,
-                                selected: _selectedSpot?.id == spot.id,
-                                onTap: () {
-                                  setState(() => _selectedSpot = spot);
-                                },
-                              ),
-                            );
-                          }),
+                              return Positioned(
+                                left: left,
+                                top: top,
+                                child: SpotMarker(
+                                  spot: spot,
+                                  selected: _selectedSpot?.id == spot.id,
+                                  onTap: () {
+                                    setState(() => _selectedSpot = spot);
+                                  },
+                                ),
+                              );
+                            }),
+                          ],
                           Positioned(
                             right: 16,
                             bottom: 16,
@@ -178,13 +209,13 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            widget.floor.name,
+                            _floor.name,
                             style: AppTextStyles.caption,
                           ),
                         ],
                       ),
                       Text(
-                        '\$${_selectedSpot?.pricePerHour.toStringAsFixed(2) ?? '0.00'} per hour',
+                        '₹${_selectedSpot?.pricePerHour.toStringAsFixed(2) ?? '0.00'} per hour',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
@@ -259,7 +290,7 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        '\$${total.toStringAsFixed(2)}',
+                        '₹${total.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -270,24 +301,27 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   PrimaryButton(
-                    label: 'Confirm for \$${total.toStringAsFixed(2)}',
-                    onPressed: () {
-                      final booking = Booking(
-                        id: 'bk-${DateTime.now().millisecondsSinceEpoch}',
-                        lotName: lot.name,
-                        spotLabel: spot.label,
-                        floor: widget.floor.name,
-                        dateLabel: 'Today',
-                        timeLabel: '$_hours hr',
-                        status: BookingStatus.active,
-                        imageAsset: lot.imageAsset,
+                    label: 'Confirm for ₹${total.toStringAsFixed(2)}',
+                    onPressed: () async {
+                      final booking = await BookingService.createBooking(
+                        facilityId: int.tryParse(lot.id) ?? 0,
+                        durationHours: _hours.toDouble(),
                       );
+                      if (!mounted) return;
                       Navigator.pop(context);
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.bookingConfirmation,
-                        arguments: booking,
-                      );
+                      if (booking != null) {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.bookingConfirmation,
+                          arguments: booking,
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Booking failed. Try again.'),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ],

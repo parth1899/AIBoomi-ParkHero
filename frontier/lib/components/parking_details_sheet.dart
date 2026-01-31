@@ -70,7 +70,7 @@ class ParkingDetailsSheet extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               _DetailPill(
                 label: 'Rate',
-                value: '\$${lot.pricePerHour.toStringAsFixed(2)}/hr',
+                value: '₹${lot.pricePerHour.toStringAsFixed(2)}/hr',
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import '../data/dummy_data.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
 import '../utils/mapbox_service.dart';
+import '../services/facility_service.dart';
 
 class ParkingSearchDelegate extends SearchDelegate {
   @override
@@ -46,7 +47,10 @@ class ParkingSearchDelegate extends SearchDelegate {
 
   Widget _buildResults(BuildContext context) {
     final normalized = query.toLowerCase();
-    final local = parkingLots
+    final localSource = FacilityService.cachedFacilities.isNotEmpty
+      ? FacilityService.cachedFacilities
+      : parkingLots;
+    final local = localSource
         .where(
           (lot) =>
               lot.name.toLowerCase().contains(normalized) ||

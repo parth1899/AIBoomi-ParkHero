@@ -43,9 +43,9 @@ Route<dynamic> onGenerateAppRoute(RouteSettings settings) {
         ),
       );
     case AppRoutes.floorMap:
-      final floorArgs = settings.arguments as ParkingFloor;
+      final floorArgs = settings.arguments as FloorMapArgs;
       return MaterialPageRoute(
-        builder: (_) => FloorMapScreen(floor: floorArgs),
+        builder: (_) => FloorMapScreen(args: floorArgs),
       );
     case AppRoutes.navigation:
       final lot = settings.arguments as ParkingLot;

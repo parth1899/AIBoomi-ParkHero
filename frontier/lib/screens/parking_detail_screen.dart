@@ -7,8 +7,9 @@ import '../components/primary_button.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
 import '../types/models.dart';
+import '../services/facility_service.dart';
 
-class ParkingDetailScreen extends StatelessWidget {
+class ParkingDetailScreen extends StatefulWidget {
   final ParkingLot lot;
 
   const ParkingDetailScreen({
@@ -17,8 +18,32 @@ class ParkingDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<ParkingDetailScreen> createState() => _ParkingDetailScreenState();
+}
+
+class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
+  late ParkingLot _lot;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _lot = widget.lot;
+    _loadDetails();
+  }
+
+  Future<void> _loadDetails() async {
+    final detail = await FacilityService.fetchFacilityDetail(widget.lot.id);
+    if (!mounted) return;
+    setState(() {
+      _lot = detail ?? widget.lot;
+      _loading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final floor = _getFloorForLot(lot);
+    final floor = _getFloorForLot(_lot);
     return Scaffold(
       body: Stack(
         children: [
@@ -46,7 +71,7 @@ class ParkingDetailScreen extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       SvgPicture.asset(
-                        lot.imageAsset,
+                        _lot.imageAsset,
                         fit: BoxFit.cover,
                       ),
                       Container(
@@ -69,7 +94,7 @@ class ParkingDetailScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              lot.name,
+                              _lot.name,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 24,
@@ -87,7 +112,7 @@ class ParkingDetailScreen extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    lot.address,
+                                    _lot.address,
                                     style: const TextStyle(
                                       color: Colors.white70,
                                       fontSize: 13,
@@ -136,7 +161,7 @@ class ParkingDetailScreen extends StatelessWidget {
                                   Row(
                                     children: [
                                       Text(
-                                        '\$${lot.pricePerHour.toStringAsFixed(2)}',
+                                        '₹${_lot.pricePerHour.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.w700,
@@ -164,7 +189,7 @@ class ParkingDetailScreen extends StatelessWidget {
                               child: Row(
                                 children: [
                                   Text(
-                                    lot.rating.toStringAsFixed(1),
+                                    _lot.rating.toStringAsFixed(1),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                       color: AppColors.success,
@@ -177,7 +202,7 @@ class ParkingDetailScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '${lot.reviewCount} reviews',
+                              '${_lot.reviewCount} reviews',
                               style: AppTextStyles.caption,
                             ),
                           ],
@@ -193,7 +218,7 @@ class ParkingDetailScreen extends StatelessWidget {
                               onTap: () => Navigator.pushNamed(
                                 context,
                                 AppRoutes.navigation,
-                                arguments: lot,
+                                arguments: _lot,
                               ),
                             ),
                           ),
@@ -214,7 +239,10 @@ class ParkingDetailScreen extends StatelessWidget {
                         onTap: () => Navigator.pushNamed(
                           context,
                           AppRoutes.floorMap,
-                          arguments: floor,
+                          arguments: FloorMapArgs(
+                            floor: floor,
+                            lot: _lot,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -237,14 +265,14 @@ class ParkingDetailScreen extends StatelessWidget {
                               icon: Icons.access_time,
                               title: 'Open 24 Hours',
                               subtitle: 'Operating Hours',
-                              trailing: lot.isOpen ? 'Open Now' : 'Closed',
-                              trailingColor: lot.isOpen
+                              trailing: _lot.isOpen ? 'Open Now' : 'Closed',
+                              trailingColor: _lot.isOpen
                                   ? AppColors.success
                                   : AppColors.textSecondary,
                             ),
                             InfoTile(
                               icon: Icons.navigation,
-                              title: '${lot.distance} miles away',
+                              title: '${_lot.distance} miles away',
                               subtitle: 'Distance from you',
                               trailing: '4 min walk',
                               trailingColor: AppColors.textSecondary,
@@ -264,7 +292,7 @@ class ParkingDetailScreen extends StatelessWidget {
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
-                        children: lot.amenities
+                        children: _lot.amenities
                             .map((amenity) => AmenityChip(amenity: amenity))
                             .toList(),
                       ),
@@ -280,11 +308,16 @@ class ParkingDetailScreen extends StatelessWidget {
             right: AppSpacing.md,
             bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
             child: PrimaryButton(
-              label: 'Book Spot for \$${lot.pricePerHour.toStringAsFixed(2)}',
+              label: _loading
+                  ? 'Loading...'
+                  : 'Book Spot for ₹${_lot.pricePerHour.toStringAsFixed(2)}',
               onPressed: () => Navigator.pushNamed(
                 context,
                 AppRoutes.floorMap,
-                arguments: floor,
+                arguments: FloorMapArgs(
+                  floor: floor,
+                  lot: _lot,
+                ),
               ),
             ),
           ),

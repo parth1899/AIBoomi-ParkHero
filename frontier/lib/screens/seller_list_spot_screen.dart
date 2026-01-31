@@ -140,7 +140,7 @@ class _SellerListSpotScreenState extends State<SellerListSpotScreen> {
                           ),
                         ),
                         Text(
-                          '\$${spot.pricePerHour.toStringAsFixed(2)}/hr',
+                          '₹${spot.pricePerHour.toStringAsFixed(2)}/hr',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,

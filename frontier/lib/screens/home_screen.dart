@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../types/models.dart';
 import '../utils/mapbox_service.dart';
 import '../utils/location_utils.dart';
+import '../services/facility_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,12 +28,25 @@ class _HomeScreenState extends State<HomeScreen> {
   geo.Position? _currentPosition;
   bool _availableOnly = true;
   double _radiusKm = 3.0;
-  List<ParkingLot> _visibleLots = parkingLots;
+  List<ParkingLot> _allLots = [];
+  List<ParkingLot> _visibleLots = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _fetchCurrentLocation();
+    _loadFacilities();
+  }
+
+  Future<void> _loadFacilities() async {
+    final lots = await FacilityService.fetchFacilities();
+    if (!mounted) return;
+    setState(() {
+      _allLots = lots;
+      _loading = false;
+      _applyFilters();
+    });
   }
 
   @override
@@ -124,7 +138,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _applyFilters() {
     final position = _currentPosition;
-    List<ParkingLot> lots = List.of(parkingLots);
+    List<ParkingLot> lots = _allLots.isNotEmpty
+        ? List.of(_allLots)
+        : List.of(parkingLots);
 
     if (_availableOnly) {
       lots = lots.where((lot) => lot.isOpen).toList();
@@ -133,6 +149,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (position != null) {
       lots = lots
           .where((lot) {
+            if (lot.latitude == 0.0 && lot.longitude == 0.0) {
+              return true;
+            }
             final distance = LocationUtils.distanceInKm(
               lat1: position.latitude,
               lon1: position.longitude,
@@ -142,10 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
             return distance <= _radiusKm;
           })
           .toList();
-    }
-
-    if (lots.isEmpty) {
-      lots = List.of(parkingLots);
     }
 
     _visibleLots = lots;
@@ -181,10 +196,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final fallbackLots = _allLots.isNotEmpty ? _allLots : parkingLots;
     final featuredLot = _visibleLots.isNotEmpty
       ? _visibleLots.first
-      : parkingLots.first;
-    final lotsToShow = _visibleLots.isNotEmpty ? _visibleLots : parkingLots;
+      : fallbackLots.first;
+    final lotsToShow = _visibleLots.isNotEmpty ? _visibleLots : fallbackLots;
 
     return Scaffold(
       body: Stack(
@@ -322,12 +338,26 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: AppTextStyles.subtitle,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          ...lotsToShow.map(
-                            (lot) => ParkingCard(
-                              lot: lot,
-                              onTap: () => _showLotDetails(lot),
+                          if (_loading)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 18),
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else ...[ 
+                            if (lotsToShow.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Text('No nearby parking found.'),
+                              ),
+                            ...lotsToShow.map(
+                              (lot) => ParkingCard(
+                                lot: lot,
+                                onTap: () => _showLotDetails(lot),
+                              ),
                             ),
-                          ),
+                          ],
                           const SizedBox(height: AppSpacing.xl),
                         ],
                       ),

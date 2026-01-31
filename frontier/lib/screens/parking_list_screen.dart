@@ -10,6 +10,7 @@ import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
 import '../utils/location_utils.dart';
 import '../types/models.dart';
+import '../services/facility_service.dart';
 
 class ParkingListScreen extends StatefulWidget {
   final double? centerLat;
@@ -29,14 +30,27 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
   geo.Position? _currentPosition;
   bool _availableOnly = true;
   double _radiusKm = 3.0;
-  List<ParkingLot> _visibleLots = parkingLots;
+  List<ParkingLot> _allLots = [];
+  List<ParkingLot> _visibleLots = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadFacilities();
     if (widget.centerLat != null && widget.centerLon != null) {
       _applyFilters();
     }
+  }
+
+  Future<void> _loadFacilities() async {
+    final lots = await FacilityService.fetchFacilities();
+    if (!mounted) return;
+    setState(() {
+      _allLots = lots;
+      _loading = false;
+      _applyFilters();
+    });
   }
 
   Future<void> _fetchCurrentLocation() async {
@@ -51,7 +65,7 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
   void _applyFilters() {
     final position = _currentPosition;
     final hasSearchCenter = widget.centerLat != null && widget.centerLon != null;
-    var lots = List.of(parkingLots);
+    var lots = _allLots.isNotEmpty ? List.of(_allLots) : List.of(parkingLots);
 
     if (_availableOnly) {
       lots = lots.where((lot) => lot.isOpen).toList();
@@ -62,6 +76,9 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
       final centerLon = hasSearchCenter ? widget.centerLon! : position!.longitude;
       lots = lots
           .where((lot) {
+            if (lot.latitude == 0.0 && lot.longitude == 0.0) {
+              return true;
+            }
             final distance = LocationUtils.distanceInKm(
               lat1: centerLat,
               lon1: centerLon,
@@ -72,11 +89,6 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
           })
           .toList();
     }
-
-    if (lots.isEmpty) {
-      lots = List.of(parkingLots);
-    }
-
     _visibleLots = lots;
   }
 
@@ -181,16 +193,20 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: _visibleLots.length,
-                    itemBuilder: (context, index) {
-                      final lot = _visibleLots[index];
-                      return ParkingCard(
-                        lot: lot,
-                        onTap: () => _showLotDetails(lot),
-                      );
-                    },
-                  ),
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _visibleLots.isEmpty
+                          ? const Center(child: Text('No nearby parking found.'))
+                          : ListView.builder(
+                              itemCount: _visibleLots.length,
+                              itemBuilder: (context, index) {
+                                final lot = _visibleLots[index];
+                                return ParkingCard(
+                                  lot: lot,
+                                  onTap: () => _showLotDetails(lot),
+                                );
+                              },
+                            ),
                 ),
                 const SizedBox(height: 80),
               ],
