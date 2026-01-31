@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -46,6 +48,19 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
 
   Future<void> _loadFloorMap() async {
     final lot = widget.args.lot;
+    if (_isMall(lot)) {
+      final mockFloors = _buildMockMallFloors(lot);
+      if (!mounted) return;
+      setState(() {
+        _floors = mockFloors;
+        _selectedFloorIndex = 0;
+        _floor = _floors.first;
+        _selectedSpot = _pickInitialSpot(_floor);
+        _loading = false;
+      });
+      return;
+    }
+
     List<ParkingFloor> floors = const [];
     if (lot.id.isNotEmpty) {
       floors = await AtlasService.fetchFacilityFloorsWithSpots(
@@ -80,6 +95,96 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
       (spot) => spot.status == SpotStatus.available,
       orElse: () => floor.spots.first,
     );
+  }
+
+  bool _isMall(ParkingLot lot) {
+    final type = lot.facilityType?.toLowerCase();
+    if (type == 'mall' || type == 'shopping_mall') return true;
+    return lot.name.toLowerCase().contains('mall');
+  }
+
+  List<ParkingFloor> _buildMockMallFloors(ParkingLot lot) {
+    final random = Random(lot.id.hashCode);
+    final floorLabels = <String>['Ground', 'Level 1', 'Level 2'];
+    return floorLabels.asMap().entries.map((entry) {
+      final index = entry.key;
+      final label = entry.value;
+      final columns = 8;
+      final rows = 6;
+      final total = columns * rows;
+      final spots = List.generate(total, (i) {
+        final col = i % columns;
+        final row = i ~/ columns;
+        final x = (col + 1) / (columns + 1);
+        final y = (row + 1) / (rows + 1);
+        final isAvailable = random.nextDouble() > 0.35;
+        final status = isAvailable ? SpotStatus.available : SpotStatus.occupied;
+        return ParkingSpot(
+          id: '${lot.id}-$index-$i',
+          label: '${String.fromCharCode(65 + row)}${col + 1}',
+          x: x,
+          y: y,
+          status: status,
+          pricePerHour: lot.pricePerHour,
+        );
+      });
+
+      final availableCount = spots
+          .where((spot) => spot.status == SpotStatus.available)
+          .length;
+
+      return ParkingFloor(
+        id: '${lot.id}-floor-$index',
+        apiId: null,
+        name: label,
+        imageAsset: 'assets/images/floor_map.svg',
+        spots: spots,
+        totalSpots: total,
+        availableSpots: availableCount,
+      );
+    }).toList();
+  }
+
+  void _reserveSpotLocally(ParkingSpot spot) {
+    final updatedSpots = _floor.spots.map((item) {
+      if (item.id != spot.id) return item;
+      return ParkingSpot(
+        id: item.id,
+        label: item.label,
+        x: item.x,
+        y: item.y,
+        status: SpotStatus.occupied,
+        pricePerHour: item.pricePerHour,
+        amenities: item.amenities,
+      );
+    }).toList();
+
+    final updatedFloor = ParkingFloor(
+      id: _floor.id,
+      apiId: _floor.apiId,
+      name: _floor.name,
+      imageAsset: _floor.imageAsset,
+      imageUrl: _floor.imageUrl,
+      totalSpots: _floor.totalSpots,
+      availableSpots: _floor.availableSpots == null
+          ? null
+          : (_floor.availableSpots! - 1).clamp(0, _floor.availableSpots!),
+      spots: updatedSpots,
+    );
+
+    final updatedFloors = [..._floors];
+    if (_selectedFloorIndex >= 0 && _selectedFloorIndex < updatedFloors.length) {
+      updatedFloors[_selectedFloorIndex] = updatedFloor;
+    }
+
+    setState(() {
+      _floor = updatedFloor;
+      _floors = updatedFloors;
+      _selectedSpot = updatedSpots.firstWhere(
+        (s) => s.id == spot.id,
+        orElse: () => spot,
+      );
+    });
   }
 
   @override
@@ -265,7 +370,8 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
                   const SizedBox(height: AppSpacing.md),
                   PrimaryButton(
                     label: 'Reserve Spot',
-                    onPressed: _selectedSpot == null
+                    onPressed: _selectedSpot == null ||
+                            _selectedSpot?.status != SpotStatus.available
                         ? null
                         : () => _showHourPicker(context, lot),
                   ),
@@ -281,6 +387,28 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
   void _showHourPicker(BuildContext context, ParkingLot lot) {
     final spot = _selectedSpot;
     if (spot == null) return;
+
+    if (_isMall(lot)) {
+      showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Spot reserved'),
+            content: Text(
+              'Spot ${spot.label} is temporarily reserved for you.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+      _reserveSpotLocally(spot);
+      return;
+    }
 
     showModalBottomSheet(
       context: context,

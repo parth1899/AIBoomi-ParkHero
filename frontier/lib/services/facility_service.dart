@@ -75,6 +75,7 @@ class FacilityService {
       name: facility['name'] as String? ?? 'Parking Facility',
       address: facility['address'] as String? ??
         (facility['owner_name'] as String? ?? 'Address unavailable'),
+      facilityType: facility['type']?.toString(),
       areaTags: (facility['badges'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList() ??

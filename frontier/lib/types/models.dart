@@ -62,6 +62,7 @@ class ParkingLot {
   final String id;
   final String name;
   final String address;
+  final String? facilityType;
   final List<String> areaTags;
   final double latitude;
   final double longitude;
@@ -81,6 +82,7 @@ class ParkingLot {
     required this.id,
     required this.name,
     required this.address,
+    this.facilityType,
     required this.areaTags,
     required this.latitude,
     required this.longitude,
