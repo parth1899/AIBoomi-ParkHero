@@ -5,6 +5,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import '../components/app_glass_card.dart';
 import '../components/parking_card.dart';
 import '../components/parking_search_delegate.dart';
+import '../components/parking_details_sheet.dart';
 import '../data/dummy_data.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
@@ -51,7 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
         pulsingEnabled: true,
       ),
     );
-    await _addParkingMarkers(_visibleLots);
+    final lotsToRender = _visibleLots.isNotEmpty ? _visibleLots : parkingLots;
+    await _addParkingMarkers(lotsToRender);
   }
 
   Future<void> _addParkingMarkers(List<ParkingLot> lots) async {
@@ -142,8 +144,39 @@ class _HomeScreenState extends State<HomeScreen> {
           .toList();
     }
 
+    if (lots.isEmpty) {
+      lots = List.of(parkingLots);
+    }
+
     _visibleLots = lots;
     _addParkingMarkers(_visibleLots);
+  }
+
+  void _showLotDetails(ParkingLot lot) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => ParkingDetailsSheet(
+        lot: lot,
+        onGetDirections: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.navigation,
+            arguments: lot,
+          );
+        },
+        onViewDetails: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.parkingDetail,
+            arguments: lot,
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -151,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final featuredLot = _visibleLots.isNotEmpty
       ? _visibleLots.first
       : parkingLots.first;
+    final lotsToShow = _visibleLots.isNotEmpty ? _visibleLots : parkingLots;
 
     return Scaffold(
       body: Stack(
@@ -288,14 +322,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: AppTextStyles.subtitle,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          ..._visibleLots.map(
+                          ...lotsToShow.map(
                             (lot) => ParkingCard(
                               lot: lot,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                AppRoutes.parkingDetail,
-                                arguments: lot,
-                              ),
+                              onTap: () => _showLotDetails(lot),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.xl),

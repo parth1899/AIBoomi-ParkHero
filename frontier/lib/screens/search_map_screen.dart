@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../components/parking_card.dart';
+import '../components/parking_details_sheet.dart';
 import '../data/dummy_data.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
@@ -76,6 +77,37 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
               5.0,
         )
         .toList();
+
+    if (_nearbyLots.isEmpty) {
+      _nearbyLots = List.of(parkingLots);
+    }
+  }
+
+  void _showLotDetails(ParkingLot lot) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => ParkingDetailsSheet(
+        lot: lot,
+        onGetDirections: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.navigation,
+            arguments: lot,
+          );
+        },
+        onViewDetails: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.parkingDetail,
+            arguments: lot,
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -139,11 +171,7 @@ class _SearchMapScreenState extends State<SearchMapScreen> {
                           ..._nearbyLots.map(
                             (lot) => ParkingCard(
                               lot: lot,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                AppRoutes.parkingDetail,
-                                arguments: lot,
-                              ),
+                              onTap: () => _showLotDetails(lot),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.xl),

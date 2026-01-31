@@ -44,22 +44,30 @@ class _NavigationScreenState extends State<NavigationScreen> {
     final position = await LocationUtils.getCurrentPosition();
     if (!mounted) return;
     setState(() => _current = position);
-    if (position == null || _lineManager == null) return;
+    if (_lineManager == null) return;
+
+    final startLat = position?.latitude ?? (widget.lot.latitude + 0.01);
+    final startLon = position?.longitude ?? (widget.lot.longitude - 0.01);
 
     final route = await MapboxService.getRoute(
-      startLat: position.latitude,
-      startLon: position.longitude,
+      startLat: startLat,
+      startLon: startLon,
       endLat: widget.lot.latitude,
       endLon: widget.lot.longitude,
     );
-    if (route == null) return;
-    setState(() => _route = route);
+    final resolvedRoute = route ?? _buildFallbackRoute(
+      startLat: startLat,
+      startLon: startLon,
+      endLat: widget.lot.latitude,
+      endLon: widget.lot.longitude,
+    );
+    setState(() => _route = resolvedRoute);
 
     await _lineManager!.deleteAll();
     await _lineManager!.create(
       PolylineAnnotationOptions(
         geometry: LineString(
-          coordinates: route.coordinates
+          coordinates: resolvedRoute.coordinates
               .map((coord) => Position(coord[0], coord[1]))
               .toList(),
         ),
@@ -76,6 +84,30 @@ class _NavigationScreenState extends State<NavigationScreen> {
         ),
         zoom: 13.0,
       ),
+    );
+  }
+
+  MapboxRoute _buildFallbackRoute({
+    required double startLat,
+    required double startLon,
+    required double endLat,
+    required double endLon,
+  }) {
+    final distanceKm = LocationUtils.distanceInKm(
+      lat1: startLat,
+      lon1: startLon,
+      lat2: endLat,
+      lon2: endLon,
+    );
+    final distanceMeters = distanceKm * 1000;
+    final durationSeconds = (distanceMeters / 12.5).roundToDouble();
+    return MapboxRoute(
+      coordinates: [
+        [startLon, startLat],
+        [endLon, endLat],
+      ],
+      distanceMeters: distanceMeters,
+      durationSeconds: durationSeconds,
     );
   }
 

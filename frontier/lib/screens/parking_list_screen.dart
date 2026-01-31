@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart' as geo;
 import '../components/app_glass_card.dart';
 import '../components/parking_card.dart';
 import '../components/parking_search_delegate.dart';
+import '../components/parking_details_sheet.dart';
 import '../data/dummy_data.dart';
 import '../navigation/app_routes.dart';
 import '../theme/app_theme.dart';
@@ -72,7 +73,38 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
           .toList();
     }
 
+    if (lots.isEmpty) {
+      lots = List.of(parkingLots);
+    }
+
     _visibleLots = lots;
+  }
+
+  void _showLotDetails(ParkingLot lot) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => ParkingDetailsSheet(
+        lot: lot,
+        onGetDirections: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.navigation,
+            arguments: lot,
+          );
+        },
+        onViewDetails: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.parkingDetail,
+            arguments: lot,
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -155,11 +187,7 @@ class _ParkingListScreenState extends State<ParkingListScreen> {
                       final lot = _visibleLots[index];
                       return ParkingCard(
                         lot: lot,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.parkingDetail,
-                          arguments: lot,
-                        ),
+                        onTap: () => _showLotDetails(lot),
                       );
                     },
                   ),
