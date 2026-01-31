@@ -77,11 +77,14 @@ class FloorSerializer(serializers.ModelSerializer):
 class DeviceSerializer(serializers.ModelSerializer):
     """Device serializer for binding management."""
     spot_code = serializers.CharField(source='bound_spot.code', read_only=True)
+    facility_name = serializers.CharField(source='bound_facility.name', read_only=True)
     
     class Meta:
         model = Device
         fields = [
-            'id', 'device_code', 'bound_spot', 'spot_code',
+            'id', 'device_code', 'device_type', 
+            'bound_spot', 'spot_code',
+            'bound_facility', 'facility_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']

@@ -2,6 +2,7 @@
 Access verification and validation services for LOCKBOX app.
 """
 from django.utils import timezone
+from django.db import models
 from apps.orbit.models import Booking
 from common.utils import generate_qr_code
 
@@ -56,7 +57,7 @@ def get_access_payload(booking):
     Returns:
         Dictionary with QR code data
     """
-    payload_data = f"PARKHERO:{booking.access_code}:{booking.id}"
+    payload_data = f"PARKHERO-{booking.access_code}-{booking.id}"
     qr_code_base64 = generate_qr_code(payload_data)
     
     return {
@@ -94,8 +95,8 @@ def validate_barrier_access(qr_payload, device_code):
         
     # 2. Parse QR Code
     try:
-        # Expected format: PARKHERO:ACCESS_CODE:BOOKING_ID
-        parts = qr_payload.split(':')
+        # Expected format: PARKHERO-ACCESS_CODE-BOOKING_ID
+        parts = qr_payload.split('-')
         if len(parts) != 3 or parts[0] != 'PARKHERO':
             return {'valid': False, 'error': 'Invalid QR format'}
             
