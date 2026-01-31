@@ -107,7 +107,9 @@ def create_government_parking_lots():
             type='lot',
             address=row['Parking Address'],
             onboarding_type='enterprise',
-            confidence_score=85
+            confidence_score=85,
+            latitute=row.get('Latitude'),
+            longitude=row.get('Longitude')
         )
         
         # Create single ground floor
@@ -213,7 +215,9 @@ def create_independent_parking_lots(lot_owner):
             confidence_score=75,
             owner=lot_owner,
             hourly_rate=Decimal(str(lot['hourly_rate'])),
-            daily_rate=Decimal(str(lot['daily_rate']))
+            daily_rate=Decimal(str(lot['daily_rate'])),
+            latitute=lot.get('lat'),
+            longitude=lot.get('lon')
         )
         
         # Create barrier device for access control
@@ -318,7 +322,9 @@ def create_homeowner_parking(homeowner):
             confidence_score=70,
             owner=homeowner,
             hourly_rate=Decimal(str(home['hourly_rate'])),
-            daily_rate=Decimal(str(home['daily_rate']))
+            daily_rate=Decimal(str(home['daily_rate'])),
+            latitute=home.get('lat'),
+            longitude=home.get('lon')
         )
         
         # Create barrier device for access control
@@ -406,7 +412,9 @@ def create_mall_parking():
             type='mall',
             address=mall['address'],
             onboarding_type='enterprise',
-            confidence_score=95
+            confidence_score=95,
+            latitute=mall.get('lat'),
+            longitude=mall.get('lon')
         )
         
         # Create floors

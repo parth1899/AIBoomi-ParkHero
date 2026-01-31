@@ -16,7 +16,8 @@ class MobileFacilityListSerializer(serializers.ModelSerializer):
         model = Facility
         fields = [
             'id', 'name', 'type', 'onboarding_type', 'confidence', 
-            'available_spots', 'price', 'badges', 'owner_name', 'requires_approval'
+            'available_spots', 'price', 'badges', 'owner_name', 'requires_approval',
+            'latitute', 'longitude'
         ]
     
     def get_available_spots(self, obj):
@@ -69,7 +70,8 @@ class MobileFacilityDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'type', 'address', 'onboarding_type', 'confidence',
             'available_spots', 'price', 'hourly_rate', 'daily_rate',
-            'floors', 'badges', 'owner_name', 'requires_approval'
+            'floors', 'badges', 'owner_name', 'requires_approval',
+            'latitute', 'longitude'
         ]
     
     def get_available_spots(self, obj):

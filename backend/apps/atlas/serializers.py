@@ -15,6 +15,7 @@ class FacilitySerializer(serializers.ModelSerializer):
             'confidence_score', 'available_spots_count',
             'owner', 'owner_username', 'owner_name',
             'hourly_rate', 'daily_rate',
+            'latitute', 'longitude',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -42,7 +43,8 @@ class FacilityListSerializer(serializers.ModelSerializer):
         model = Facility
         fields = [
             'id', 'name', 'type', 'onboarding_type', 'confidence_score', 
-            'available_spots', 'hourly_rate', 'daily_rate', 'owner_name'
+            'available_spots', 'hourly_rate', 'daily_rate', 'owner_name',
+            'latitute', 'longitude'
         ]
     
     def get_available_spots(self, obj):

@@ -22,7 +22,7 @@ class FacilityAdmin(admin.ModelAdmin):
     """Admin interface for Facility model."""
     list_display = [
         'name', 'type', 'onboarding_type', 
-        'confidence_score', 'created_at'
+        'confidence_score', 'latitute', 'longitude', 'created_at'
     ]
     list_filter = ['type', 'onboarding_type']
     search_fields = ['name', 'address']
@@ -31,7 +31,7 @@ class FacilityAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'type', 'address')
+            'fields': ('name', 'type', 'address', 'latitute', 'longitude')
         }),
         ('Configuration', {
             'fields': ('onboarding_type', 'confidence_score')

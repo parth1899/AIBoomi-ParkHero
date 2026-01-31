@@ -52,6 +52,20 @@ class Facility(TimeStampedModel):
         blank=True,
         help_text="Daily parking rate in INR"
     )
+    latitute = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Latitude of the facility"
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Longitude of the facility"
+    )
     
     class Meta:
         verbose_name_plural = "Facilities"
