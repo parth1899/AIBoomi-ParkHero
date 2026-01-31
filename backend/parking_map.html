@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkHero - Pune Parking Facilities Map</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #map-container {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 16px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px;
+            border-radius: 12px;
+            color: white;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .legend-icon.mall {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .legend-icon.govt {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .legend-icon.independent {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .legend-icon.homeowner {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        /* Custom marker styles */
+        .custom-marker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.1);
+        }
+
+        .custom-marker.mall {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .custom-marker.govt {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .custom-marker.independent {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .custom-marker.homeowner {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        /* Popup styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .popup-content {
+            padding: 8px;
+            min-width: 250px;
+        }
+
+        .popup-content h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .popup-content .type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .popup-content .type-badge.mall {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .popup-content .type-badge.govt {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .popup-content .type-badge.independent {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .popup-content .type-badge.homeowner {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        .popup-content .address {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 12px;
+        }
+
+        .popup-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .popup-stat {
+            background: #f7fafc;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .popup-stat .label {
+            font-size: 10px;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .popup-stat .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .popup-stat .value.available {
+            color: #48bb78;
+        }
+
+        .confidence-bar {
+            margin-top: 12px;
+        }
+
+        .confidence-bar .label {
+            font-size: 11px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .confidence-bar .bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map-container">
+        <div class="header">
+            <h1>🅿️ ParkHero Pune</h1>
+            <p>Interactive Parking Facilities Map</p>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="label">Facilities</div>
+                    <div class="value" id="total-facilities">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Spots</div>
+                    <div class="value" id="total-spots">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Available</div>
+                    <div class="value" id="available-spots">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Occupancy</div>
+                    <div class="value" id="occupancy">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h3>Facility Types</h3>
+            <div class="legend-item">
+                <div class="legend-icon mall"></div>
+                <span>Commercial Malls (5)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon govt"></div>
+                <span>Government Lots (30)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon independent"></div>
+                <span>Independent Lots (5)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon homeowner"></div>
+                <span>Homeowner Spaces (6)</span>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Embedded facilities data
+        const facilities = [
+  {
+    "id": 92,
+    "name": "Westend Mall",
+    "type": "mall",
+    "address": "Aundh, Pune, Maharashtra 411007",
+    "lat": 18.5642,
+    "lon": 73.8077,
+    "confidence": 95,
+    "onboarding_type": "enterprise",
+    "total_spots": 210,
+    "available_spots": 51,
+    "floors_count": 3
+  },
+  {
+    "id": 91,
+    "name": "Pavilion Mall",
+    "type": "mall",
+    "address": "Senapati Bapat Road, Shivajinagar, Pune 411016",
+    "lat": 18.5304,
+    "lon": 73.8431,
+    "confidence": 95,
+    "onboarding_type": "enterprise",
+    "total_spots": 140,
+    "available_spots": 47,
+    "floors_count": 2
+  },
+  {
+    "id": 90,
+    "name": "Amanora Town Centre",
+    "type": "mall",
+    "address": "Amanora Park Town, Hadapsar, Pune 411028",
+    "lat": 18.5089,
+    "lon": 73.9284,
+    "confidence": 95,
+    "onboarding_type": "enterprise",
+    "total_spots": 340,
+    "available_spots": 104,
+    "floors_count": 3
+  },
+  {
+    "id": 89,
+    "name": "Seasons Mall",
+    "type": "mall",
+    "address": "Magarpatta City, Hadapsar, Pune 411028",
+    "lat": 18.5196,
+    "lon": 73.9284,
+    "confidence": 95,
+    "onboarding_type": "enterprise",
+    "total_spots": 240,
+    "available_spots": 70,
+    "floors_count": 3
+  },
+  {
+    "id": 88,
+    "name": "Phoenix Market City",
+    "type": "mall",
+    "address": "Viman Nagar, Pune, Maharashtra 411014",
+    "lat": 18.5679,
+    "lon": 73.9143,
+    "confidence": 95,
+    "onboarding_type": "enterprise",
+    "total_spots": 450,
+    "available_spots": 139,
+    "floors_count": 4
+  },
+  {
+    "id": 87,
+    "name": "Hinjewadi Residential - Mehta",
+    "type": "lot",
+    "address": "Bungalow 89, Phase 1, Hinjewadi",
+    "lat": 18.5912,
+    "lon": 73.7389,
+    "confidence": 70,
+    "onboarding_type": "small",
+    "total_spots": 2,
+    "available_spots": 1,
+    "floors_count": 1
+  },
+  {
+    "id": 86,
+    "name": "Wakad Home Parking - Kulkarni",
+    "type": "lot",
+    "address": "Plot 23, Sector A, Wakad",
+    "lat": 18.5978,
+    "lon": 73.7644,
+    "confidence": 70,
+    "onboarding_type": "small",
+    "total_spots": 1,
+    "available_spots": 1,
+    "floors_count": 1
+  },
+  {
+    "id": 85,
+    "name": "Kalyani Nagar Private Parking - Joshi",
+    "type": "lot",
+    "address": "Row House 7, Kalyani Nagar, Pune",
+    "lat": 18.5483,
+    "lon": 73.9067,
+    "confidence": 70,
+    "onboarding_type": "small",
+    "total_spots": 3,
+    "available_spots": 3,
+    "floors_count": 1
+  },
+  {
+    "id": 84,
+    "name": "Baner Society Parking - Deshmukh",
+    "type": "lot",
+    "address": "Flat B-304, Green Valley, Baner",
+    "lat": 18.559,
+    "lon": 73.7793,
+    "confidence": 70,
+    "onboarding_type": "small",
+    "total_spots": 2,
+    "available_spots": 2,
+    "floors_count": 1
+  },
+  {
+    "id": 83,
+    "name": "Koregaon Park Home Parking - Patel",
+    "type": "lot",
+    "address": "Villa 45, North Main Road, Koregaon Park",
+    "lat": 18.5401,
+    "lon": 73.8921,
+    "confidence": 70,
+    "onboarding_type": "small",
+    "total_spots": 1,
+    "available_spots": 0,
+    "floors_count": 1
+  },
+  {
+    "id": 82,
+    "name": "Aundh Residential Parking - Sharma",
+    "type": "lot",
+    "address": "Bungalow No. 12, Aundh, Pune",
+    "lat": 18.5642,
+    "lon": 73.8077,
+    "confidence": 70,
+    "onboarding_type": "small",
+    "total_spots": 2,
+    "available_spots": 2,
+    "floors_count": 1
+  },
+  {
+    "id": 81,
+    "name": "Kothrud Market Parking",
+    "type": "lot",
+    "address": "Kothrud Market, Pune",
+    "lat": 18.5074,
+    "lon": 73.8077,
+    "confidence": 75,
+    "onboarding_type": "small",
+    "total_spots": 28,
+    "available_spots": 20,
+    "floors_count": 1
+  },
+  {
+    "id": 80,
+    "name": "Viman Nagar Plaza Parking",
+    "type": "lot",
+    "address": "Near Phoenix Market City, Viman Nagar",
+    "lat": 18.5679,
+    "lon": 73.9143,
+    "confidence": 75,
+    "onboarding_type": "small",
+    "total_spots": 35,
+    "available_spots": 23,
+    "floors_count": 1
+  },
+  {
+    "id": 79,
+    "name": "Deccan Gymkhana Lot",
+    "type": "lot",
+    "address": "Opposite Fergusson College, Pune",
+    "lat": 18.5089,
+    "lon": 73.8343,
+    "confidence": 75,
+    "onboarding_type": "small",
+    "total_spots": 40,
+    "available_spots": 32,
+    "floors_count": 1
+  },
+  {
+    "id": 78,
+    "name": "FC Road Parking Zone",
+    "type": "lot",
+    "address": "Near Goodluck Cafe, FC Road, Pune",
+    "lat": 18.5314,
+    "lon": 73.8446,
+    "confidence": 75,
+    "onboarding_type": "small",
+    "total_spots": 30,
+    "available_spots": 24,
+    "floors_count": 1
+  },
+  {
+    "id": 77,
+    "name": "Koregaon Park Quick Park",
+    "type": "lot",
+    "address": "Lane 5, Koregaon Park, Pune",
+    "lat": 18.5362,
+    "lon": 73.8958,
+    "confidence": 75,
+    "onboarding_type": "small",
+    "total_spots": 25,
+    "available_spots": 19,
+    "floors_count": 1
+  },
+  {
+    "id": 76,
+    "name": "Bhaumaharaj Bol ",
+    "type": "lot",
+    "address": "Shukrawar Peth , Pune",
+    "lat": 18.5172,
+    "lon": 73.8562,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 30,
+    "available_spots": 19,
+    "floors_count": 1
+  },
+  {
+    "id": 75,
+    "name": "Iscon Temple",
+    "type": "lot",
+    "address": "Kondhva Bk., Pune ",
+    "lat": 18.4658,
+    "lon": 73.8918,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 33,
+    "floors_count": 1
+  },
+  {
+    "id": 74,
+    "name": "Kharadi S.No. 72, Amenity Space ",
+    "type": "lot",
+    "address": "Kharadi, Pune ",
+    "lat": 18.5578,
+    "lon": 73.9365,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 100,
+    "available_spots": 64,
+    "floors_count": 1
+  },
+  {
+    "id": 73,
+    "name": "Punya nagari, Vadgaon Sheri",
+    "type": "lot",
+    "address": "Vadgaon Sheri, Pune",
+    "lat": 18.5595,
+    "lon": 73.9125,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 83,
+    "available_spots": 62,
+    "floors_count": 1
+  },
+  {
+    "id": 72,
+    "name": "Sambhaji garden Mech. J.M. Road",
+    "type": "lot",
+    "address": "Jangali Maharaj Road,Shivajinagar ,  Pune ",
+    "lat": 18.5338,
+    "lon": 73.8458,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 34,
+    "floors_count": 1
+  },
+  {
+    "id": 71,
+    "name": "S.Nagar, FP660, J.M. Road",
+    "type": "lot",
+    "address": "Jangali Maharaj Road,Shivajinagar ,  Pune ",
+    "lat": 18.5325,
+    "lon": 73.8452,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 95,
+    "available_spots": 69,
+    "floors_count": 1
+  },
+  {
+    "id": 70,
+    "name": "S.Nagar, Millenium Plaza",
+    "type": "lot",
+    "address": "Shivajinagar, pune ",
+    "lat": 18.5312,
+    "lon": 73.8448,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 90,
+    "available_spots": 66,
+    "floors_count": 1
+  },
+  {
+    "id": 69,
+    "name": "S.Nagar, F.C.  Shirole Road",
+    "type": "lot",
+    "address": "Shivajinagar, Pune ",
+    "lat": 18.5305,
+    "lon": 73.8435,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 46,
+    "available_spots": 28,
+    "floors_count": 1
+  },
+  {
+    "id": 68,
+    "name": "S.Nagar FP 576",
+    "type": "lot",
+    "address": "Shivajinagar , Pune ",
+    "lat": 18.5317,
+    "lon": 73.8442,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 94,
+    "available_spots": 61,
+    "floors_count": 1
+  },
+  {
+    "id": 67,
+    "name": "Dhanakavdi, Truck Terminal",
+    "type": "lot",
+    "address": "Dhankwadi, Pune ",
+    "lat": 18.4588,
+    "lon": 73.8625,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 27,
+    "floors_count": 1
+  },
+  {
+    "id": 66,
+    "name": "Katraj Milk Dairy, PMPML",
+    "type": "lot",
+    "address": "Katraj, Pune ",
+    "lat": 18.4495,
+    "lon": 73.8615,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 55,
+    "available_spots": 39,
+    "floors_count": 1
+  },
+  {
+    "id": 65,
+    "name": "Katraj PMT, Old Octroi Naka",
+    "type": "lot",
+    "address": "Katraj, Pune ",
+    "lat": 18.4512,
+    "lon": 73.8608,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 62,
+    "available_spots": 47,
+    "floors_count": 1
+  },
+  {
+    "id": 64,
+    "name": "Rajiv Gandi Udyan",
+    "type": "lot",
+    "address": "Katraj, Pune ",
+    "lat": 18.4482,
+    "lon": 73.8597,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 80,
+    "available_spots": 64,
+    "floors_count": 1
+  },
+  {
+    "id": 63,
+    "name": "Saibaba Temple",
+    "type": "lot",
+    "address": "Satara Road, Pune ",
+    "lat": 18.4812,
+    "lon": 73.8642,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 74,
+    "available_spots": 48,
+    "floors_count": 1
+  },
+  {
+    "id": 62,
+    "name": "Decision Tower,S.No.692",
+    "type": "lot",
+    "address": "Bibvewadi, Pune ",
+    "lat": 18.4769,
+    "lon": 73.8668,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 35,
+    "floors_count": 1
+  },
+  {
+    "id": 61,
+    "name": "P.L. Desh. Udyan",
+    "type": "lot",
+    "address": "Sinhagad Road , Pune ",
+    "lat": 18.4962,
+    "lon": 73.8368,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 100,
+    "available_spots": 67,
+    "floors_count": 1
+  },
+  {
+    "id": 60,
+    "name": " Bhavani Peth, Nagzari Nala ",
+    "type": "lot",
+    "address": "Kasewadi, Bhavani Peth, Pune ",
+    "lat": 18.5108,
+    "lon": 73.8532,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 70,
+    "available_spots": 49,
+    "floors_count": 1
+  },
+  {
+    "id": 59,
+    "name": "Shahu Udyan",
+    "type": "lot",
+    "address": "Somwar peth, Pune ",
+    "lat": 18.5175,
+    "lon": 73.8542,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 20,
+    "available_spots": 16,
+    "floors_count": 1
+  },
+  {
+    "id": 58,
+    "name": "Alpana Theatre, Ganesh Peth",
+    "type": "lot",
+    "address": "Ganesh Peth ,Laxmi road , Pune ",
+    "lat": 18.5147,
+    "lon": 73.8493,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 33,
+    "available_spots": 21,
+    "floors_count": 1
+  },
+  {
+    "id": 57,
+    "name": "M. Gandhi ",
+    "type": "lot",
+    "address": "Bund Garden, Pune ",
+    "lat": 18.5272,
+    "lon": 73.8815,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 79,
+    "available_spots": 59,
+    "floors_count": 1
+  },
+  {
+    "id": 56,
+    "name": "Dudhbhatti, Rasta Peth, Daruwala Bridge ",
+    "type": "lot",
+    "address": " Rasta Peth, Pune ",
+    "lat": 18.5162,
+    "lon": 73.8512,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 92,
+    "available_spots": 63,
+    "floors_count": 1
+  },
+  {
+    "id": 55,
+    "name": " Shinde Tukaram  ( 4 Wheeler )",
+    "type": "lot",
+    "address": "Pune Station ",
+    "lat": 18.5285,
+    "lon": 73.8744,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 42,
+    "floors_count": 1
+  },
+  {
+    "id": 54,
+    "name": " Shinde Tukaram  ( 2 Wheeler) ",
+    "type": "lot",
+    "address": "Pune Stataion ",
+    "lat": 18.5285,
+    "lon": 73.8744,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 41,
+    "floors_count": 1
+  },
+  {
+    "id": 53,
+    "name": "Aryan, Babu Genu ",
+    "type": "lot",
+    "address": "Mandai, Pune ",
+    "lat": 18.5148,
+    "lon": 73.8548,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 100,
+    "available_spots": 70,
+    "floors_count": 1
+  },
+  {
+    "id": 52,
+    "name": "Navloba Temple",
+    "type": "lot",
+    "address": "Saras Baug, Pune ",
+    "lat": 18.5055,
+    "lon": 73.8492,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 65,
+    "available_spots": 49,
+    "floors_count": 1
+  },
+  {
+    "id": 51,
+    "name": "Haribhau Sane",
+    "type": "lot",
+    "address": "Narayan Peth, Pune ",
+    "lat": 18.5115,
+    "lon": 73.8492,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 50,
+    "available_spots": 30,
+    "floors_count": 1
+  },
+  {
+    "id": 50,
+    "name": "Peshve Park",
+    "type": "lot",
+    "address": " Sadashiv Peth,Pune ",
+    "lat": 18.5069,
+    "lon": 73.8467,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 60,
+    "available_spots": 48,
+    "floors_count": 1
+  },
+  {
+    "id": 49,
+    "name": "Hamalwada",
+    "type": "lot",
+    "address": "Narayan peth, Pune ",
+    "lat": 18.5117,
+    "lon": 73.8487,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 100,
+    "available_spots": 68,
+    "floors_count": 1
+  },
+  {
+    "id": 48,
+    "name": "Laxmi Road  709/ 710 ",
+    "type": "lot",
+    "address": "709/710,  Laxmi road ,Pune ",
+    "lat": 18.5135,
+    "lon": 73.8465,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 54,
+    "available_spots": 43,
+    "floors_count": 1
+  },
+  {
+    "id": 47,
+    "name": "Minarva, Misal",
+    "type": "lot",
+    "address": "Mandai, Pune",
+    "lat": 18.5145,
+    "lon": 73.8553,
+    "confidence": 85,
+    "onboarding_type": "enterprise",
+    "total_spots": 100,
+    "available_spots": 72,
+    "floors_count": 1
+  }
+];
+
+        // Initialize map centered on Pune
+        const map = L.map('map').setView([18.5204, 73.8567], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Update stats
+        const totalSpots = facilities.reduce((sum, f) => sum + f.total_spots, 0);
+        const availableSpots = facilities.reduce((sum, f) => sum + f.available_spots, 0);
+        const occupancy = Math.round(((totalSpots - availableSpots) / totalSpots) * 100);
+
+        document.getElementById('total-facilities').textContent = facilities.length;
+        document.getElementById('total-spots').textContent = totalSpots.toLocaleString();
+        document.getElementById('available-spots').textContent = availableSpots.toLocaleString();
+        document.getElementById('occupancy').textContent = occupancy + '%';
+
+        // Determine facility category
+        function getFacilityCategory(facility) {
+            if (facility.type === 'mall') return 'mall';
+            if (facility.onboarding_type === 'enterprise' && facility.type === 'lot') return 'govt';
+            if (facility.onboarding_type === 'small' && facility.total_spots > 10) return 'independent';
+            return 'homeowner';
+        }
+
+        // Get marker icon based on category
+        function getMarkerIcon(category) {
+            const icons = {
+                'mall': '🏬',
+                'govt': '🏛️',
+                'independent': '🅿️',
+                'homeowner': '🏠'
+            };
+            return icons[category] || '📍';
+        }
+
+        // Add markers for each facility
+        facilities.forEach(facility => {
+            const category = getFacilityCategory(facility);
+            const icon = getMarkerIcon(category);
+
+            // Create custom div icon
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="custom-marker ${category}">${icon}</div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -20]
+            });
+
+            // Create marker
+            const marker = L.marker([facility.lat, facility.lon], { icon: customIcon })
+                .addTo(map);
+
+            // Create popup content
+            const popupContent = `
+                <div class="popup-content">
+                    <h3>${facility.name}</h3>
+                    <div class="type-badge ${category}">
+                        ${category === 'mall' ? 'Commercial Mall' :
+                    category === 'govt' ? 'Government Lot' :
+                        category === 'independent' ? 'Independent Lot' : 'Homeowner Space'}
+                    </div>
+                    <div class="address">${facility.address}</div>
+                    <div class="popup-stats">
+                        <div class="popup-stat">
+                            <div class="label">Total Spots</div>
+                            <div class="value">${facility.total_spots}</div>
+                        </div>
+                        <div class="popup-stat">
+                            <div class="label">Available</div>
+                            <div class="value available">${facility.available_spots}</div>
+                        </div>
+                        ${facility.floors_count > 1 ? `
+                        <div class="popup-stat">
+                            <div class="label">Floors</div>
+                            <div class="value">${facility.floors_count}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="label">Confidence Score</div>
+                        <div class="bar">
+                            <div class="fill" style="width: ${facility.confidence}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent, {
+                maxWidth: 300,
+                className: 'custom-popup'
+            });
+        });
+
+        // Fit map to show all markers
+        const bounds = L.latLngBounds(facilities.map(f => [f.lat, f.lon]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+    </script>
+</body>
+
+</html>
