@@ -46,3 +46,44 @@ jobs:
           name: APK Build ${{ github.run_number }}
           generate_release_notes: true
           files: frontier/build/app/outputs/flutter-apk/app-release.apk
+
+  build-ios:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: frontier
+        run: flutter pub get
+
+      - name: Build iOS app (no codesign)
+        working-directory: frontier
+        run: flutter build ios --release --no-codesign
+
+      - name: Archive iOS app
+        working-directory: frontier
+        run: |
+          mkdir -p build/ios_artifacts
+          zip -r build/ios_artifacts/app-release-ios.zip build/ios/iphoneos/Runner.app
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-ios
+          path: frontier/build/ios_artifacts/app-release-ios.zip
+
+      - name: Publish iOS build to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ github.run_number }}
+          name: iOS Build ${{ github.run_number }}
+          generate_release_notes: true
+          files: frontier/build/ios_artifacts/app-release-ios.zip
