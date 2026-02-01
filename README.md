@@ -74,7 +74,9 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 	  - Email: parthmanisha8777@gmail.com
 
 ## Product demo & downloads
-- Demo video: TODO: Add demo video / hosted app / presentation link (e.g., a short walkthrough video or hosted prototype URL).
+- Demo video:
+https://github.com/user-attachments/assets/95f0802a-dd87-46bd-aa07-fd133ea92b8f
+
 - Android APK (release): https://github.com/parth1899/AIBoomi-ParkHero/releases/tag/apk-6
 
 ## GitHub repo URL
