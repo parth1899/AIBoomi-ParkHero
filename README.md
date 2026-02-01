@@ -1,12 +1,12 @@
 # ParkHero
 
-**ParkHero** is a consumer-facing parking discovery and booking app designed for fast, confident parking decisions. It connects drivers to available spots in malls, lots, and garages while giving hosts a predictable booking flow.
+**ParkHero** is a consumer-facing parking discovery and booking app designed for fast, confident parking decisions. It connects drivers to available spots in malls, lots, garages, and homeowner-listed P2P spots on the marketplace, while giving hosts a predictable booking flow.
 
 This repository contains the Flutter mobile app (Frontier) and a Django REST Framework backend.
 
 ---
 
-## Problem statement (2–3 lines)
+## Problem statement
 Drivers waste time and fuel searching for parking, while hosts have unused capacity they cannot monetize easily. ParkHero reduces parking search friction by surfacing availability and enabling quick reservations.
 
 ## Users & context
@@ -14,7 +14,7 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 - **Hosts/facility owners:** want higher utilization and structured bookings.
 - **Context:** urban malls, lots, and garages with variable demand.
 
-## Solution overview (diagram optional)
+## Solution overview
 - **Mobile app** for discovery → floor/spot selection → reservation.
 - **Backend services** for inventory, booking lifecycle, and access validation.
 - **Mall demo mode** uses local mock floor plans when floor images are unavailable.
@@ -46,9 +46,9 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 4. `uv run python manage.py runserver`
 
 ## Models & data (sources, licenses)
-- **Facility, Floor, ParkingSpot, Booking, Device** modeled in Django.
-- **Data sources:** internal seed data/scripts + admin-created records.
-- **Licenses:** list any third‑party datasets and their licenses here. (TODO)
+- **Models:** `Facility`, `Floor`, `ParkingSpot`, `Booking`, `Device` (Django models under `backend/apps/atlas`).
+- **Data sources:** internal seed/ingest scripts (see `backend/setup_initial_data.py`) and admin-created records. Some government parking lists (Excel/CSV) are used as seed inputs.
+- **Licenses:** Please document any third‑party dataset licenses you include here before submission (placeholder).
 
 ## Evaluation & guardrails (hallucination/bias mitigations)
 - No generative content is shown to end users in the MVP.
@@ -61,10 +61,18 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 - Pricing rules and payments are simplified for MVP.
 
 ## Team (names, roles, contacts)
-- TODO: Add team members, roles, and contact links.
+- **Team Name:** Inclined
+- **Team Number:** 46
+- **Members:**
+	- Parth Kalani
+	  - Phone: +91 7358353305
+	  - Email: parthkalani1899@gmail.com
+	- Parth Petkar
+	  - Phone: +91 9373063894
+	  - Email: parthmanisha8777@gmail.com
 
 ## Product demo link
-- TODO: Add demo video / hosted app / presentation link.
+- TODO: Add demo video / hosted app / presentation link. (e.g., a short walkthrough video or hosted prototype URL)
 
 ## GitHub repo URL
-- TODO: Add repository URL.
+- TODO: Add repository URL (e.g., https://github.com/<your-org>/AIBoomi-ParkHero).
