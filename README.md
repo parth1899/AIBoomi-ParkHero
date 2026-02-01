@@ -14,10 +14,13 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 - **Hosts/facility owners:** want higher utilization and structured bookings.
 - **Context:** urban malls, lots, and garages with variable demand.
 
+- **ML service consumers:** backend APIs and analytics components that use occupancy and pricing signals.
+
 ## Solution overview
 - **Mobile app** for discovery → floor/spot selection → reservation.
 - **Backend services** for inventory, booking lifecycle, and access validation.
 - **Mall demo mode** uses local mock floor plans when floor images are unavailable.
+- **ML service:** lightweight Python service providing occupancy prediction and dynamic pricing models consumed by the backend (see `ml-service`).
 
 **Tech stack**
 - Frontend: Flutter (Dart)
@@ -45,12 +48,19 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 3. `uv run python manage.py migrate`
 4. `uv run python manage.py runserver`
 
+**ML service**
+1. `cd ml-service`
+2. Install dependencies (see `ml-service/README.md` or `pyproject.toml`): `pip install -r requirements.txt` or use your preferred tool.
+3. Run the service: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8001`
+
 - See [Product demo & downloads](#product-demo--downloads) for the APK and demo resources.
 
 ## Models & data (sources, licenses)
 - **Models:** `Facility`, `Floor`, `ParkingSpot`, `Booking`, `Device` (Django models under `backend/apps/atlas`).
 - **Data sources:** internal seed/ingest scripts (see `backend/setup_initial_data.py`) and admin-created records. Some government parking lists (Excel/CSV) are used as seed inputs.
 - **Licenses:** Please document any third‑party dataset licenses you include here before submission (placeholder).
+- **ML models:** `ml-service/models/occupancy_regressor_model.joblib` and `ml-service/models/dynamic_price_model.joblib` (pretrained, used by the ML service).
+- **ML data sources:** seeded from internal operational data; document any third‑party dataset licenses before production use.
 
 ## Evaluation & guardrails (hallucination/bias mitigations)
 - No generative content is shown to end users in the MVP.
