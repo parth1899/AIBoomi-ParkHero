@@ -45,6 +45,8 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 3. `uv run python manage.py migrate`
 4. `uv run python manage.py runserver`
 
+- See [Product demo & downloads](#product-demo--downloads) for the APK and demo resources.
+
 ## Models & data (sources, licenses)
 - **Models:** `Facility`, `Floor`, `ParkingSpot`, `Booking`, `Device` (Django models under `backend/apps/atlas`).
 - **Data sources:** internal seed/ingest scripts (see `backend/setup_initial_data.py`) and admin-created records. Some government parking lists (Excel/CSV) are used as seed inputs.
@@ -71,8 +73,9 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 	  - Phone: +91 9373063894
 	  - Email: parthmanisha8777@gmail.com
 
-## Product demo link
-- TODO: Add demo video / hosted app / presentation link. (e.g., a short walkthrough video or hosted prototype URL)
+## Product demo & downloads
+- Demo video: TODO: Add demo video / hosted app / presentation link (e.g., a short walkthrough video or hosted prototype URL).
+- Android APK (release): https://github.com/parth1899/AIBoomi-ParkHero/releases/tag/apk-6
 
 ## GitHub repo URL
-- TODO: Add repository URL (e.g., https://github.com/<your-org>/AIBoomi-ParkHero).
+- TODO: Add repository URL (e.g., https://github.com/parth1899/AIBoomi-ParkHero).
