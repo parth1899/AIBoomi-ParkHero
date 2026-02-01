@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -48,30 +49,25 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
 
   Future<void> _loadFloorMap() async {
     final lot = widget.args.lot;
-    if (_isMall(lot)) {
-      final mockFloors = _buildMockMallFloors(lot);
-      if (!mounted) return;
-      setState(() {
-        _floors = mockFloors;
-        _selectedFloorIndex = 0;
-        _floor = _floors.first;
-        _selectedSpot = _pickInitialSpot(_floor);
-        _loading = false;
-      });
-      return;
-    }
-
+    // Priority: 1. AtlasService (Facilities API), 2. FloorService, 3. Mock
     List<ParkingFloor> floors = const [];
+    ParkingFloor? remoteFloor;
+    
     if (lot.id.isNotEmpty) {
       floors = await AtlasService.fetchFacilityFloorsWithSpots(
         facilityId: lot.id,
       );
     }
 
-    ParkingFloor? remoteFloor;
     if (floors.isEmpty && _floor.apiId != null) {
       remoteFloor = await FloorService.fetchFloorMap(_floor.apiId!);
     }
+
+    // Fallback to mock if API failed and it looks like a mall or we have no data
+    if (floors.isEmpty && remoteFloor == null && _isMall(lot)) {
+      floors = _buildMockMallFloors(lot);
+    }
+
     if (!mounted) return;
     setState(() {
       if (floors.isNotEmpty) {
@@ -205,179 +201,34 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  children: [
-                    ..._floors.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final floor = entry.value;
-                      return _LevelChip(
-                        label: floor.name,
-                        selected: index == _selectedFloorIndex,
-                        onTap: () {
-                          setState(() {
-                            _selectedFloorIndex = index;
-                            _floor = _floors[index];
-                            _selectedSpot = _pickInitialSpot(_floor);
-                          });
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.card,
-                              borderRadius: BorderRadius.circular(AppRadii.lg),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.06),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(AppRadii.lg),
-                              child: _floor.imageUrl != null
-                                  ? Image.network(
-                                      _floor.imageUrl!,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : SvgPicture.asset(
-                                      _floor.imageAsset,
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
-                          ),
-                          if (_loading)
-                            const Center(child: CircularProgressIndicator())
-                          else ...[
-                            ..._floor.spots.map((spot) {
-                              final left = spot.x * constraints.maxWidth;
-                              final top = spot.y * constraints.maxHeight;
-
-                              return Positioned(
-                                left: left,
-                                top: top,
-                                child: SpotMarker(
-                                  spot: spot,
-                                  selected: _selectedSpot?.id == spot.id,
-                                  onTap: () {
-                                    setState(() => _selectedSpot = spot);
-                                  },
-                                ),
-                              );
-                            }),
-                          ],
-                          Positioned(
-                            right: 16,
-                            bottom: 16,
-                            child: Column(
-                              children: [
-                                _MapAction(icon: Icons.my_location),
-                                const SizedBox(height: 10),
-                                _MapAction(icon: Icons.layers),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
+          _FloorSelector(
+            floors: _floors,
+            selectedIndex: _selectedFloorIndex,
+            onSelect: (index) {
+              setState(() {
+                _selectedFloorIndex = index;
+                _floor = _floors[index];
+                _selectedSpot = _pickInitialSpot(_floor);
+              });
+            },
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _ParkingLotList(
+                    spots: _floor.spots,
+                    selectedSpotId: _selectedSpot?.id,
+                    onSpotSelected: (spot) {
+                      setState(() => _selectedSpot = spot);
                     },
                   ),
-                ),
-              ),
-              const SizedBox(height: 120),
-            ],
           ),
-          Positioned(
-            left: AppSpacing.md,
-            right: AppSpacing.md,
-            bottom: AppSpacing.md,
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(AppRadii.lg),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 18,
-                    offset: const Offset(0, -6),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      _LegendDot(color: AppColors.teal, label: 'Available'),
-                      const SizedBox(width: 16),
-                      _LegendDot(
-                        color: AppColors.textSecondary,
-                        label: 'Occupied',
-                      ),
-                      const SizedBox(width: 16),
-                      _LegendDot(color: AppColors.primary, label: 'Selected'),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Spot ${_selectedSpot?.label ?? ''}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _floor.name,
-                            style: AppTextStyles.caption,
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '₹${_selectedSpot?.pricePerHour.toStringAsFixed(2) ?? '0.00'} per hour',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  PrimaryButton(
-                    label: 'Reserve Spot',
-                    onPressed: _selectedSpot == null ||
-                            _selectedSpot?.status != SpotStatus.available
-                        ? null
-                        : () => _showHourPicker(context, lot),
-                  ),
-                ],
-              ),
-            ),
+          _SelectionDetailsBar(
+            floorName: _floor.name,
+            selectedSpot: _selectedSpot,
+            onReserve: () => _showHourPicker(context, lot),
           ),
         ],
       ),
@@ -412,85 +263,172 @@ class _FloorMapScreenState extends State<FloorMapScreen> {
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final total = spot.pricePerHour * _hours;
-            return Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Select Hours', style: AppTextStyles.subtitle),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
+            final now = DateTime.now();
+            final endTime = now.add(Duration(hours: _hours));
+            final endStr = '${endTime.hour > 12 ? endTime.hour - 12 : endTime.hour}:${endTime.minute.toString().padLeft(2, '0')} ${endTime.hour >= 12 ? 'PM' : 'AM'}';
+
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.card.withOpacity(0.95),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      IconButton(
-                        onPressed: () {
-                          if (_hours > 1) {
-                            setModalState(() => _hours--);
-                            setState(() {});
-                          }
-                        },
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      Text(
-                        '$_hours hrs',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          if (_hours < 12) {
-                            setModalState(() => _hours++);
-                            setState(() {});
-                          }
-                        },
-                        icon: const Icon(Icons.add_circle_outline),
+                      const SizedBox(height: AppSpacing.lg),
+                      const Text('Schedule Booking', style: AppTextStyles.title),
+                      const SizedBox(height: AppSpacing.md),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withOpacity(0.8),
+                              Colors.white.withOpacity(0.4),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadii.lg),
+                          border: Border.all(color: Colors.white.withOpacity(0.6)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('DURATION', style: AppTextStyles.caption),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (_hours > 1) {
+                                          setModalState(() => _hours--);
+                                          setState(() {});
+                                        }
+                                      },
+                                      child: const Icon(Icons.remove_circle, color: AppColors.textSecondary),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '$_hours hrs',
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (_hours < 24) {
+                                          setModalState(() => _hours++);
+                                          setState(() {});
+                                        }
+                                      },
+                                      child: const Icon(Icons.add_circle, color: AppColors.primary),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(width: 1, height: 40, color: AppColors.divider),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('UNTIL', style: AppTextStyles.caption),
+                                const SizedBox(height: 4),
+                                Text(
+                                  endStr,
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      const Spacer(),
-                      Text(
-                        '₹${total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                      const SizedBox(height: AppSpacing.xl),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total', style: AppTextStyles.subtitle),
+                          Text(
+                            '₹${total.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(
+                        width: double.infinity,
+                        child: PrimaryButton(
+                          label: 'Confirm Booking',
+                          onPressed: () async {
+                            final booking = await BookingService.createBooking(
+                              facilityId: int.tryParse(lot.id) ?? 0,
+                              durationHours: _hours.toDouble(),
+                            );
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            if (booking != null) {
+                              final fullBooking = booking.copyWith(
+                                latitude: lot.latitude,
+                                longitude: lot.longitude,
+                              );
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.bookingConfirmation,
+                                arguments: fullBooking,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Booking failed. Try again.'),
+                                ),
+                              );
+                            }
+                          },
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  PrimaryButton(
-                    label: 'Confirm for ₹${total.toStringAsFixed(2)}',
-                    onPressed: () async {
-                      final booking = await BookingService.createBooking(
-                        facilityId: int.tryParse(lot.id) ?? 0,
-                        durationHours: _hours.toDouble(),
-                      );
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      if (booking != null) {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.bookingConfirmation,
-                          arguments: booking,
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Booking failed. Try again.'),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
+                ),
               ),
             );
           },
@@ -545,30 +483,210 @@ class _LevelChip extends StatelessWidget {
   }
 }
 
-class _MapAction extends StatelessWidget {
-  final IconData icon;
+class _ParkingLotList extends StatelessWidget {
+  final List<ParkingSpot> spots;
+  final String? selectedSpotId;
+  final Function(ParkingSpot) onSpotSelected;
 
-  const _MapAction({
-    required this.icon,
+  const _ParkingLotList({
+    required this.spots,
+    required this.selectedSpotId,
+    required this.onSpotSelected,
+  });
+
+  Map<String, List<ParkingSpot>> _groupSpots(List<ParkingSpot> allSpots) {
+    final groups = <String, List<ParkingSpot>>{};
+    for (var spot in allSpots) {
+      String groupName = 'General';
+      final parts = spot.label.split('-');
+      if (parts.length > 1) {
+        final lastPart = parts.last;
+        final match = RegExp(r'^([A-Z]+)\d*').firstMatch(lastPart);
+        if (match != null) {
+          groupName = 'Row ${match.group(1)}';
+        } else {
+           if (parts.length == 2 && int.tryParse(parts.last) != null) {
+              groupName = 'Section ${parts.first}';
+           }
+        }
+      } else {
+         final match = RegExp(r'^([A-Z]+)').firstMatch(spot.label);
+         if (match != null) {
+            groupName = 'Row ${match.group(1)}';
+         }
+      }
+      groups.putIfAbsent(groupName, () => []).add(spot);
+    }
+    
+    final sortedKeys = groups.keys.toList()..sort();
+    return Map.fromEntries(sortedKeys.map((k) => MapEntry(k, groups[k]!)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final grouped = _groupSpots(spots);
+    
+    if (grouped.isEmpty) {
+       return const Center(child: Text('No spots available on this floor.'));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
+      itemCount: grouped.length,
+      separatorBuilder: (c, i) => const SizedBox(height: AppSpacing.xl),
+      itemBuilder: (context, index) {
+        final groupName = grouped.keys.elementAt(index);
+        final groupSpots = grouped[groupName]!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              groupName,
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: groupSpots.map((spot) {
+                return SpotMarker(
+                  spot: spot,
+                  selected: spot.id == selectedSpotId,
+                  onTap: () => onSpotSelected(spot),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FloorSelector extends StatelessWidget {
+  final List<ParkingFloor> floors;
+  final int selectedIndex;
+  final Function(int) onSelect;
+
+  const _FloorSelector({
+     required this.floors,
+     required this.selectedIndex,
+     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
-      height: 42,
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppRadii.md),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
+             color: Colors.black.withOpacity(0.05),
+             offset: const Offset(0, 4),
+             blurRadius: 10,
+          )
+        ]
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: floors.asMap().entries.map((entry) {
+             final index = entry.key;
+             final floor = entry.value;
+             return _LevelChip(
+               label: floor.name,
+               selected: index == selectedIndex,
+               onTap: () => onSelect(index),
+             );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectionDetailsBar extends StatelessWidget {
+  final String floorName;
+  final ParkingSpot? selectedSpot;
+  final VoidCallback onReserve;
+
+  const _SelectionDetailsBar({
+    required this.floorName,
+    required this.selectedSpot,
+    required this.onReserve,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+           BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+           )
         ],
       ),
-      child: Icon(icon, color: AppColors.primary),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+             Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _LegendDot(color: AppColors.teal, label: 'Available'),
+                  const SizedBox(width: 24),
+                  _LegendDot(color: AppColors.textSecondary, label: 'Occupied'),
+                  const SizedBox(width: 24),
+                  _LegendDot(color: AppColors.primary, label: 'Selected'),
+                ],
+             ),
+             const SizedBox(height: AppSpacing.lg),
+             Row(
+                children: [
+                   Expanded(
+                      child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                            Text(
+                               selectedSpot != null ? 'Spot ${selectedSpot!.label}' : 'Select a spot',
+                               style: AppTextStyles.subtitle,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(floorName, style: AppTextStyles.caption),
+                         ],
+                      ),
+                   ),
+                   if (selectedSpot != null)
+                     Text(
+                        '₹${selectedSpot!.pricePerHour.toStringAsFixed(2)}/hr',
+                        style: const TextStyle(
+                           fontSize: 18,
+                           fontWeight: FontWeight.w700,
+                           color: AppColors.primary,
+                        ),
+                     ),
+                ],
+             ),
+             const SizedBox(height: AppSpacing.lg),
+             SizedBox(
+                width: double.infinity,
+                child: PrimaryButton(
+                   label: 'Reserve Spot',
+                   onPressed: selectedSpot != null && selectedSpot!.status == SpotStatus.available ? onReserve : null,
+                ),
+             )
+          ],
+        ),
+      ),
     );
   }
 }

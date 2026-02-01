@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../navigation/app_routes.dart';
 import '../components/primary_button.dart';
 import '../theme/app_theme.dart';
 import '../types/models.dart';
@@ -130,32 +131,44 @@ class BookingConfirmationScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: const BorderSide(color: AppColors.divider),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadii.lg),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        onPressed: () {},
-                        icon: const Icon(Icons.navigation),
-                        label: const Text('Directions'),
-                      ),
+                  const Spacer(),
+                  SizedBox(
+                    width: double.infinity,
+                    child: PrimaryButton(
+                      label: 'Get Directions',
+                      onPressed: () {
+                        if (booking.latitude != null && booking.longitude != null) {
+                          // Construct a minimal ParkingLot for navigation
+                          final lot = ParkingLot(
+                            id: 'nav_temp',
+                            name: booking.lotName,
+                            address: '', // Not needed for nav
+                            areaTags: [],
+                            latitude: booking.latitude!,
+                            longitude: booking.longitude!,
+                            pricePerHour: 0,
+                            rating: 0,
+                            reviewCount: 0,
+                            distance: '',
+                            availabilityLabel: '',
+                            isOpen: true,
+                            imageAsset: '',
+                            amenities: [],
+                            floors: [],
+                          );
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.navigation,
+                            arguments: lot,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Location unavailable')),
+                          );
+                        }
+                      },
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: PrimaryButton(
-                        label: 'Add to Wallet',
-                        onPressed: () {},
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

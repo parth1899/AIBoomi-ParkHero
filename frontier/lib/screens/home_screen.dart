@@ -66,6 +66,24 @@ class _HomeScreenState extends State<HomeScreen> {
         pulsingEnabled: true,
       ),
     );
+    
+    _circleManager?.addOnCircleAnnotationClickListener(ParkingAnnotationListener(
+      onTap: (annotation) {
+        // Find lot by annotation? Mapbox annotations have IDs.
+        // Simplified: Find lot closest to annotation geometry
+        final point = annotation.geometry as Point;
+        final lat = point.coordinates.lat.toDouble();
+        final lng = point.coordinates.lng.toDouble();
+        
+        try {
+          final lot = _visibleLots.firstWhere(
+            (l) => (l.latitude - lat).abs() < 0.0001 && (l.longitude - lng).abs() < 0.0001,
+          );
+          _showLotDetails(lot);
+        } catch (_) {}
+      }
+    ));
+
     final lotsToRender = _visibleLots.isNotEmpty ? _visibleLots : parkingLots;
     await _addParkingMarkers(lotsToRender);
   }
@@ -80,10 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
           geometry: Point(
             coordinates: Position(lot.longitude, lot.latitude),
           ),
-          circleColor: lot.isOpen ? AppColors.teal.value : AppColors.textSecondary.value,
-          circleRadius: 8.0,
+          circleColor: lot.isOpen ? AppColors.primary.value : AppColors.textSecondary.value,
+          circleRadius: 10.0,
           circleStrokeColor: Colors.white.value,
-          circleStrokeWidth: 2.0,
+          circleStrokeWidth: 3.0,
         ),
       );
     }
@@ -146,24 +164,34 @@ class _HomeScreenState extends State<HomeScreen> {
       lots = lots.where((lot) => lot.isOpen).toList();
     }
 
+    List<ParkingLot> filtered = [];
     if (position != null) {
-      lots = lots
-          .where((lot) {
-            if (lot.latitude == 0.0 && lot.longitude == 0.0) {
-              return true;
-            }
-            final distance = LocationUtils.distanceInKm(
-              lat1: position.latitude,
-              lon1: position.longitude,
-              lat2: lot.latitude,
-              lon2: lot.longitude,
-            );
-            return distance <= _radiusKm;
-          })
-          .toList();
+      // Radius expansion logic: 5km -> 10km -> ... -> 50km
+      double currentRadius = 5.0;
+      while (filtered.isEmpty && currentRadius <= 55.0) {
+        filtered = lots.where((lot) {
+          if (lot.latitude == 0.0 && lot.longitude == 0.0) {
+            return true;
+          }
+          final distance = LocationUtils.distanceInKm(
+            lat1: position.latitude,
+            lon1: position.longitude,
+            lat2: lot.latitude,
+            lon2: lot.longitude,
+          );
+          return distance <= currentRadius;
+        }).toList();
+        
+        if (filtered.isEmpty) {
+           currentRadius += 5.0;
+        }
+      }
+      _radiusKm = currentRadius; // Update state if needed
+    } else {
+      filtered = lots;
     }
 
-    _visibleLots = lots;
+    _visibleLots = filtered;
     _addParkingMarkers(_visibleLots);
   }
 
@@ -370,6 +398,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+}
+
+class ParkingAnnotationListener extends OnCircleAnnotationClickListener {
+  final Function(CircleAnnotation) onTap;
+
+  ParkingAnnotationListener({required this.onTap});
+
+  @override
+  void onCircleAnnotationClick(CircleAnnotation annotation) {
+    onTap(annotation);
   }
 }
 

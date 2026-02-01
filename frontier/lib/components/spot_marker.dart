@@ -23,38 +23,30 @@ class SpotMarker extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(AppRadii.sm),
+          borderRadius: BorderRadius.circular(24), // Pill shape
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: color.withOpacity(0.25),
               blurRadius: 8,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 3),
             ),
           ],
+          border: selected 
+            ? Border.all(color: Colors.white, width: 1.5) 
+            : null,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              spot.label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            if (spot.status == SpotStatus.available) ...[
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.check_circle,
-                size: 12,
-                color: Colors.white,
-              ),
-            ],
-          ],
+        child: Text(
+          spot.label,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
+          textAlign: TextAlign.center,
         ),
       ),
     );

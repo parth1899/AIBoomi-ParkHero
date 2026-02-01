@@ -114,6 +114,8 @@ class Booking {
   final bool? requiresApproval;
   final String? hostName;
   final String? rejectionReason;
+  final double? latitude;
+  final double? longitude;
 
   const Booking({
     required this.id,
@@ -129,7 +131,45 @@ class Booking {
     this.requiresApproval,
     this.hostName,
     this.rejectionReason,
+    this.latitude,
+    this.longitude,
   });
+
+  Booking copyWith({
+    String? id,
+    String? lotName,
+    String? spotLabel,
+    String? floor,
+    String? dateLabel,
+    String? timeLabel,
+    BookingStatus? status,
+    String? imageAsset,
+    String? accessCode,
+    String? qrPayload,
+    bool? requiresApproval,
+    String? hostName,
+    String? rejectionReason,
+    double? latitude,
+    double? longitude,
+  }) {
+    return Booking(
+      id: id ?? this.id,
+      lotName: lotName ?? this.lotName,
+      spotLabel: spotLabel ?? this.spotLabel,
+      floor: floor ?? this.floor,
+      dateLabel: dateLabel ?? this.dateLabel,
+      timeLabel: timeLabel ?? this.timeLabel,
+      status: status ?? this.status,
+      imageAsset: imageAsset ?? this.imageAsset,
+      accessCode: accessCode ?? this.accessCode,
+      qrPayload: qrPayload ?? this.qrPayload,
+      requiresApproval: requiresApproval ?? this.requiresApproval,
+      hostName: hostName ?? this.hostName,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+    );
+  }
 }
 
 class AccessValidationResult {
