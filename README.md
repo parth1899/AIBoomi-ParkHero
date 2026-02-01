@@ -75,9 +75,12 @@ Drivers waste time and fuel searching for parking, while hosts have unused capac
 
 ## Product demo & downloads
 - Demo video:
-https://github.com/user-attachments/assets/95f0802a-dd87-46bd-aa07-fd133ea92b8f
+<video src="https://github.com/user-attachments/assets/95f0802a-dd87-46bd-aa07-fd133ea92b8f"
+       controls
+       width="700">
+</video>
 
 - Android APK (release): https://github.com/parth1899/AIBoomi-ParkHero/releases/tag/apk-6
 
 ## GitHub repo URL
-- TODO: Add repository URL (e.g., https://github.com/parth1899/AIBoomi-ParkHero).
+- https://github.com/parth1899/AIBoomi-ParkHero
